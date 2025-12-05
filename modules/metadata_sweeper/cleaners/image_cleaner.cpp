@@ -1,6 +1,7 @@
 #include <string>
 #include <sys/stat.h>//for stat
 #include <cstdlib> //for system which is required to run shell command inside cpp
+extern "C"{
 const char* image_cleaner(const char* filepath){
     //check if exiftool is present.i decided to do this step in the wrapper during import.so it will only happen once.
     // int check=system("which exiftool > /dev/null 2>&1");//we only care about the return value.not the exact output text.that's why we are making the output disappear
@@ -26,4 +27,5 @@ const char* image_cleaner(const char* filepath){
     }else{
         return "ERROR:CLEANING_FAILED";
     }
+}
 }
