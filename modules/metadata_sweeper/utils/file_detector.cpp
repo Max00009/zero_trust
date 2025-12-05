@@ -2,7 +2,7 @@
 #include <magic.h>//for libmagic
 #include <string>//for string handling
 #include <cstring>//for strncpy
-#include <sys/stat.h>
+#include <sys/stat.h>//for stat
 #include "file_detector.h"
 
 // Main function
