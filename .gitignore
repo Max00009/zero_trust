@@ -6,3 +6,4 @@ __pycache__
 *.webp
 *.mp4
 *.pdf
+modules/metadata_sweeper/test_files/
