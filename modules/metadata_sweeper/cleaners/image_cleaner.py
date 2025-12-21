@@ -5,6 +5,11 @@ the wrapper will load the .so file,handle the ctype stuff once,convert python st
 import subprocess #to check exiftool
 import ctypes #to load the .so file
 import os #to make the relaitve file path
+from config import ERROR_EXIFTOOL_FAILED
+from config import ERROR_ZERO_OUT_FAILED
+from config import ERROR_UNKNOWN
+from config import ERROR_FILE_NOT_FOUND
+from config import ERROR_EXIFTOOL_NOT_FOUND
 
 #now we will check if exiftool is installed ONNLY ONCE when module is loaded
 try:
@@ -29,9 +34,15 @@ _lib.image_cleaner.restype=ctypes.c_char_p
 
 def image_cleaner(filepath):
     if _exiftool_available!=True:
-        return "ERROR:EXIFTOOL_NOT_FOUND"
+        return ERROR_EXIFTOOL_NOT_FOUND
     filepath_bytes=filepath.encode('utf-8')
     result=(_lib.image_cleaner(filepath_bytes)).decode('utf-8')
-    if result.startswith('ERROR:'):
-        return None
+    if result=="ERROR:FILE_NOT_FOUND":
+        return ERROR_FILE_NOT_FOUND
+    elif result=="ERROR:EXIFTOOL_FAILED":
+        return ERROR_EXIFTOOL_FAILED
+    elif result=="ERROR:ZEROING_OUT_FAILED":
+        return ERROR_ZERO_OUT_FAILED      
+    elif result=="ERROR:UNKNOWN_ERROR":
+        return ERROR_UNKNOWN
     return result
