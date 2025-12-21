@@ -18,14 +18,24 @@ const char* image_cleaner(const char* filepath){
         return "ERROR:FILE_NOT_FOUND";
     }
     //generate the command
-    std::string command = "exiftool -all= -overwrite_original \"" + std::string(filepath) + "\"";
+    //command1 will erase whatever exiftool can remove
+    std::string command_to_remove_metadata= "exiftool -all= -overwrite_original \"" + std::string(filepath) + "\" 2>&1";
+    //command2 will zero out remaining file structure metadata.
+    //well turns out i can't chanage FileAccessDate and FileInodeChangeDate using exiftool.
+    std::string command_to_zero_out= "exiftool "
+                                    "-FileModifyDate='1970:01:01 00:00:00' "
+                                    "-overwrite_original \"" + std::string(filepath) + "\" 2>&1";
     //run command
-    int result=system(command.c_str());
+    int result1=system(command_to_remove_metadata.c_str());
+    int result2=system(command_to_zero_out.c_str());
     //check result and return
-    if(result==0){
+    if((result1==0) && (result2==0)){
         return "SUCCESS";
-    }else{
-        return "ERROR:CLEANING_FAILED";
+    }else if(result1!=0){
+        return "ERROR:EXIFTOOL_FAILED";
+    }else if(result2!=0){
+        return "ERROR:ZEROING_OUT_FAILED";
     }
+    return "ERROR:UNKNOWN_ERROR";
 }
 }
