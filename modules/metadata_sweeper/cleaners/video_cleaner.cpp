@@ -18,14 +18,33 @@ const char* video_cleaner(const char* filepath){
         return "ERROR:FILE_NOT_FOUND";
     }
     //generate the command
-    std::string command = "exiftool -all= -overwrite_original \"" + std::string(filepath) + "\"";
+    std::string command_to_remove_metadata= "exiftool -all= -overwrite_original \"" + std::string(filepath) + "\" 2>&1";
+    std::string command_to_change_internal_metadata="exiftool "
+                                                    "-CreateDate='1970:01:01 00:00:00' "
+                                                    "-ModifyDate='1970:01:01 00:00:00' "
+                                                    "-TrackCreateDate='1970:01:01 00:00:00' "
+                                                    "-TrackModifyDate='1970:01:01 00:00:00' "
+                                                    "-MediaCreateDate='1970:01:01 00:00:00' "
+                                                    "-MediaModifyDate='1970:01:01 00:00:00' "
+                                                    "-overwrite_original \"" + std::string(filepath) + "\" 2>&1";
+    //we have change FileModifyDAte at last to be effective.
+    std::string command_to_change_filesystem_metadata="exiftool "
+                                    "-FileModifyDate='1970:01:01 00:00:00' "
+                                    "-overwrite_original \"" + std::string(filepath) + "\" 2>&1";
     //run command
-    int result=system(command.c_str());
+    int result1=system(command_to_remove_metadata.c_str());
+    int result3=system(command_to_change_internal_metadata.c_str());
+    int result2=system(command_to_change_filesystem_metadata.c_str());//remember at last
     //check result and return
-    if(result==0){
+    if(result1==0 && result2==0 && result3==0){
         return "SUCCESS";
-    }else{
-        return "ERROR:CLEANING_FAILED";
+    }else if(result1!=0){
+        return "ERROR:EXIFTOOL_FAILED";
+    }else if(result2!=0){
+        return "ERROR:FILESYSYSTEM_METADATA_CLEANING_FAILED";
+    }else if(result3!=0){
+        return "ERROR:INTERNAL_METADATA_CLEANING_FAILED";
     }
+    return "ERROR:UNKNOWN_ERROR";
 }
 }
