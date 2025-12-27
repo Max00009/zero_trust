@@ -6,7 +6,8 @@ import subprocess #to check exiftool
 import ctypes #to load the .so file
 import os #to make the relaitve file path
 from config import ERROR_EXIFTOOL_FAILED
-from config import ERROR_ZERO_OUT_FAILED
+from config import ERROR_FILESYSTEM_METADATA_CLEANING_FAILED
+from config import ERROR_INTERNAL_METADATA_CLEANING_FAILED
 from config import ERROR_UNKNOWN
 from config import ERROR_FILE_NOT_FOUND
 from config import ERROR_EXIFTOOL_NOT_FOUND
@@ -41,8 +42,10 @@ def image_cleaner(filepath):
         return ERROR_FILE_NOT_FOUND
     elif result=="ERROR:EXIFTOOL_FAILED":
         return ERROR_EXIFTOOL_FAILED
-    elif result=="ERROR:ZEROING_OUT_FAILED":
-        return ERROR_ZERO_OUT_FAILED      
+    elif result=="ERROR:FILESYSYSTEM_METADATA_CLEANING_FAILED":
+        return ERROR_FILESYSTEM_METADATA_CLEANING_FAILED
+    elif result=="ERROR:INTERNAL_METADATA_CLEANING_FAILED":
+        return ERROR_INTERNAL_METADATA_CLEANING_FAILED  
     elif result=="ERROR:UNKNOWN_ERROR":
         return ERROR_UNKNOWN
     return result
