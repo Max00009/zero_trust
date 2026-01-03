@@ -56,7 +56,6 @@ const char* image_cleaner(const char* filepath,bool change_filesys_date,bool cha
             return "ERROR:FILESYSYSTEM_METADATA_CLEANING_FAILED";
         }
     }
-    //why file access time is nt changing??
     return "SUCCESS";
 }
 }
