@@ -6,6 +6,7 @@ from utils.file_detector import detect_file_type
 from cleaners.image_cleaner import image_cleaner
 from cleaners.video_cleaner import video_cleaner
 from cleaners.pdf_cleaner import pdf_cleaner
+from cleaners.audio_cleaner import audio_cleaner
 from config import ERROR_FILE_NOT_FOUND
 
 def main():
@@ -20,9 +21,18 @@ def main():
         result=image_cleaner(filepath)
         if result=="SUCCESS":
             print("yeah everything worked.check metadata now.")
+        else:
+            return result
     elif detected_file_type.startswith("video/"):
         print("it detected video and proceeding with next step")
         result=video_cleaner(filepath)
+        if result=="SUCCESS":
+            print("yeah everything worked.check metadata now.")
+        else:
+            return result
+    elif detected_file_type.startswith("audio/"):#some recordings in newer model starts with video.video cleaner will handle that.
+        print("it detected audio and proceeding with next step")
+        result=audio_cleaner(filepath)
         if result=="SUCCESS":
             print("yeah everything worked.check metadata now.")
     elif detected_file_type=="application/pdf":#not starts with .exactly same.
