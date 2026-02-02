@@ -7,3 +7,4 @@ __pycache__
 *.mp4
 *.pdf
 modules/metadata_sweeper/test_files/
+modules/traffic_shield/logs.txt
