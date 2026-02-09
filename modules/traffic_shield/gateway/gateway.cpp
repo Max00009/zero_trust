@@ -6,6 +6,7 @@
 #include <thread>
 #include <vector>
 #include <condition_variable>
+#include <fstream> //just for testing.
 
 struct Task{
     int id; //every url will have it's own id so we can track
@@ -26,11 +27,15 @@ bool gateway_open;
 
 
 int url_analizer(Task task){
-
+    std::ofstream Logfile("delete_later.txt");
+    Logfile<<"url analizer working.."<<std::endl;
+    return 0;
 }
 
 int threat_intelligence_module(Task task){
-
+    std::ofstream Logfile("delete_later.txt");
+    Logfile<<"threat intelligence module working.."<<std::endl;
+    return 0;
 }
 
 void worker_function(){
