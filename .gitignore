@@ -8,3 +8,4 @@ __pycache__
 *.pdf
 modules/metadata_sweeper/test_files/
 modules/traffic_shield/logs.txt
+modules/traffic_shield/delete_also.txt
