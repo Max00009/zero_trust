@@ -15,7 +15,7 @@ struct Task{
 
 //below i initialized with static so other cpp file can't access using extern and change value.
 static std::mutex queue_mutex; //to lock the queue
-//static std::mutex global_var_mutex; //to lock any static global variable.
+static std::mutex log_file_mutex; //to lock logging file.
 static std::queue<Task> task_queue;   //main queue where from where our worker threads will pull.
 static std::condition_variable cv;
 static std::vector<std::thread> worker_threads; //vector that contains worker threads.
@@ -27,14 +27,20 @@ bool gateway_open;
 
 
 int url_analizer(Task task){
-    std::ofstream Logfile("delete_later.txt");
-    Logfile<<"url analizer working.."<<std::endl;
+    {
+        std::lock_guard<std::mutex> lock(log_file_mutex);
+        std::ofstream Logfile("delete_also.txt",std::ios::app);
+        Logfile<<task.id <<" url analizer working.."<<std::endl;
+    }
     return 0;
 }
 
 int threat_intelligence_module(Task task){
-    std::ofstream Logfile("delete_later.txt");
-    Logfile<<"threat intelligence module working.."<<std::endl;
+    {
+        std::lock_guard<std::mutex> lock(log_file_mutex);
+        std::ofstream Logfile("delete_also.txt",std::ios::app);
+        Logfile<<task.id <<" threat intelligence module working.."<<std::endl;
+    }
     return 0;
 }
 
@@ -51,6 +57,7 @@ void worker_function(){
             task=task_queue.front();
             task_queue.pop();
         }
+        //just for debugging.main logic will be added later.
         int result_of_url_analysis=url_analizer(task);
         int result_of_threat_intelligence_module=threat_intelligence_module(task);
         
