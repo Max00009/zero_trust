@@ -1,4 +1,5 @@
 #include "gateway.h"
+#include "../cache/cache.h"
 #include <iostream>
 #include <cstring>
 #include <mutex>
@@ -10,7 +11,7 @@
 
 struct Task{
     int id; //every url will have it's own id so we can track
-    std::string url;
+    std::string url;    //we are keeping this url as std::string instead of char* cause i think that might be helpful for url analyzer.
 };
 
 //below i initialized with static so other cpp file can't access using extern and change value.
@@ -57,9 +58,15 @@ void worker_function(){
             task=task_queue.front();
             task_queue.pop();
         }
+        //we will call cache_fetch() here.if found we will continue with next loop.if not proceed for next step.
+        if(cache_fetch(task.url.c_str())!=0){   //
+            continue;
+        }
         //just for debugging.main logic will be added later.
-        int result_of_url_analysis=url_analizer(task);
+        bool result_of_url_analysis=url_analizer(task);
         int result_of_threat_intelligence_module=threat_intelligence_module(task);
+        bool decision;//decision_engine will take decision.
+        //then we will call cache_insert() to update.
         
     }
 }
@@ -80,7 +87,7 @@ int gateway_init(int max_thread_count,int max_queue_length){
 int gateway_submit(const char* url){
     //create a new Task
     Task new_task;
-    new_task.url=url;
+    new_task.url=url;   //here const char* is being converted into std::string.
     {
         std::lock_guard<std::mutex> lock(queue_mutex);//lock mutex to protect access to shared resources(task_queue).
         //check if queue is full
