@@ -10,6 +10,8 @@ TARGET=gateway.so
 SOURCE=gateway.cpp
 HEADER=gateway.h
 
+#link shared_libraries
+CACHE_LIB=../cache/cache.so
 #Build all targets
 all: $(TARGET)
 
