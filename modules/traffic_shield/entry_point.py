@@ -27,18 +27,19 @@ gateway.gateway_submit.restype=ctypes.c_int
 #gateway.gateway_get_result.argtypes=ctypes.c_int
 #gateway.gateway_get_result.restype=ctypes.c_int
 
-print(f"Initializing gateway with {thread_count} threads...")
-result_of_gateway_init=gateway.gateway_init(thread_count,queue_length)
-if result_of_gateway_init==0:
-    print("Gateway initiation successful.")
-else:
-    print("Gateway initiation failed.")
+
 
 class Urlsubmit:
     def __init__(self):
         self.log_file="logs.txt"
     #load is called once at startup.
     def load(self,loader):#not using loader right now.may be later useful.
+        print(f"Initializing gateway with {thread_count} threads...")
+        result_of_gateway_init=gateway.gateway_init(thread_count,queue_length)
+        if result_of_gateway_init==0:
+            print("Gateway initiation successful.")
+        else:
+            print("Gateway initiation failed.")
         with open(self.log_file,'a') as f:
             time=datetime.now()
             f.write(f"Starting url submission at {time}...\n")
