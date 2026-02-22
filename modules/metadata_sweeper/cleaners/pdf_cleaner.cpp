@@ -10,7 +10,7 @@ const char* pdf_cleaner(const char* filepath,bool change_filesys_date,bool chang
     // }
     //validates input
     if(filepath==NULL ||filepath[0]=='\0'){
-        return "ERROR:FILE_NOT_FOUND";
+        return "ERROR:INVALID_FILEPATH";
     }
     //checks if file exists
     struct stat file_info; //this is where file information of 'filepath' will be stored.needed for stat().stat will return 0 for success and -1 for fialure
