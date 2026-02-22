@@ -48,9 +48,9 @@ Some of the test_files was not writtable.I checked and turns out i didn't have w
     To take ownership:
     ```bash
     sudo chown -R $USER:$USER (file_path)
+	for example:sudo chown -R max1337:max1337 ./test_files/
     ```
-        for example:sudo chown -R max1337:max1337 ./test_files/
-
+	
 
     To add write permission:
     ```bash
