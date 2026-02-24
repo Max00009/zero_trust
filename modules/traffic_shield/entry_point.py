@@ -21,14 +21,16 @@ lib_path_gateway=os.path.join(current_dir,'gateway','gateway.so') #get the relat
 gateway=ctypes.CDLL(lib_path_gateway) #now it will work from anywhere
 lib_path_cache=os.path.join(current_dir,'cache','cache.so')
 cache=ctypes.CDLL(lib_path_cache)
+lib_path_decision=os.path.join(current_dir,'decision_engine','decision.so')
+decision=ctypes.CDLL(lib_path_decision)
 
 #now we have to define function signature. i.e. what every function takes as arguments and what they returns.
 gateway.gateway_init.argtypes=[ctypes.c_int,ctypes.c_int]
 gateway.gateway_init.restype=ctypes.c_int
 gateway.gateway_submit.argtypes=[ctypes.c_char_p]
 gateway.gateway_submit.restype=ctypes.c_int
-#gateway.gateway_get_result.argtypes=ctypes.c_int
-#gateway.gateway_get_result.restype=ctypes.c_int
+decision.get_decision.argtypes=ctypes.c_size_t
+decision.get_decision.restype=ctypes.c_bool
 cache.cache_init.argtypes=[ctypes.c_int64]
 cache.cache_init.restype=ctypes.c_int
 
@@ -61,6 +63,12 @@ class Urlsubmit:
     def request(self,flow:http.HTTPFlow):
         url=flow.request.pretty_url
         url_id=gateway.gateway_submit(url.encode('utf-8'))
+        #we have to somehow make the process wait untill it's result is stored in decision_engine/decision.cpp hashtable
+        #or may be we can loop the get_decision function until it get's a bool.but that might cause overhead.
+        #may be if the key,pair value is not found we can sleep for sometime and then query again.
+        result=decision.get_decision(url_id)
+        #allow/block logic.
+        #ui for block
         with open(self.log_file,'a') as f:
             f.write(f"url id={url_id} has been submitted.\n")
 
