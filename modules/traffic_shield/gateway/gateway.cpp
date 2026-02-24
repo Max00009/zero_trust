@@ -1,5 +1,6 @@
 #include "gateway.h"
 #include "../cache/cache.h"
+#include "../decision_engine/decision.h"
 #include <iostream>
 #include <cstring>
 #include <mutex>
@@ -10,7 +11,7 @@
 #include <fstream> //just for testing.
 
 struct Task{
-    int id; //every url will have it's own id so we can track
+    size_t id; //every url will have it's own id so we can track
     std::string url;    //we are keeping this url as std::string instead of char* cause i think that might be helpful for url analyzer.
 };
 
@@ -21,11 +22,10 @@ static std::queue<Task> task_queue;   //main queue where from where our worker t
 static std::condition_variable cv;
 static std::vector<std::thread> worker_threads; //vector that contains worker threads.
 
-int thread_count;
-int queue_length;
-int url_id=1;
+size_t thread_count;
+size_t queue_length;
+size_t url_id=1;
 bool gateway_open;
-
 
 int url_analizer(Task task){
     {
@@ -59,13 +59,17 @@ void worker_function(){
             task_queue.pop();
         }
         //we will call cache_fetch() here.if found we will continue with next loop.if not proceed for next step.
-        if(cache_fetch(task.url.c_str())!=0){   //
+        if(cache_fetch(task.url.c_str())!=0){
+            //we are storing only 'safe' url in cache.so if a url is found in cache,it means it's safe from previous scan.so we just let it pass.
+            //here we will send this url_id,true to update_hashtable function which is in decision.h
+            update_hashtable(task.id,true);
+            //and then continue with next task.
             continue;
         }
         //just for debugging.main logic will be added later.
         bool result_of_url_analysis=url_analizer(task);
-        int result_of_threat_intelligence_module=threat_intelligence_module(task);
-        bool decision;//decision_engine will take decision.
+        size_t result_of_threat_intelligence_module=threat_intelligence_module(task);
+        decision_making(task.id,result_of_threat_intelligence_module);//decision_engine will take scores.
         //then we will call cache_insert() to update.
         
     }
