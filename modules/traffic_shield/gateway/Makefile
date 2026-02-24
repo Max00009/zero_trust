@@ -1,6 +1,11 @@
 #compiler and flags
 CXX= g++
-CXXFLAGS= -std=c++11 -fPIC -Wall -O2 #-std=c++11 required for lambda fiunction.
+#-std=c++17 required for lambda fiunction and node deletion in hashtable.
+#fPIC=position independent code.
+#O2=optimization level 2.
+#Wall=warnings all.
+#Wextra=deep dive inspection for warnings.
+CXXFLAGS= -std=c++17 -fPIC -Wall -Wextra -O2 
 LDFLAGS= -shared -pthread
 
 #Targets
@@ -11,13 +16,14 @@ SOURCE=gateway.cpp
 HEADER=gateway.h
 
 #link shared_libraries
-CACHE_LIB=../cache/cache.so
+CACHE_LIB=../cache/cache.so #we have to link cache.so cause our gateway calls cache_fetch() function from cache.cpp
+DECISION_LIB=../decision_engine/decision.so #we have to link cache.so cause our gateway calls decision_making() function from decision.cpp
 #Build all targets
 all: $(TARGET)
 
 #Build gateway shared ibrary
 $(TARGET): $(SOURCE) $(HEADER)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(SOURCE) -o $(TARGET)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(SOURCE) -o $(TARGET) $(CACHE_LIB) $(DECISION_LIB)
 	@echo "✓ Built $(TARGET) successfully!"
 
 #Delete so file
