@@ -5,7 +5,7 @@
 #include <ctime>    //to get time.
 #include <mutex>
 #include <cstdint>  //for int64_t
-
+#include <vector>
 struct CacheUrl{
     std::string url;
     int threat_score;
@@ -39,7 +39,7 @@ int cache_init(int max_size,int64_t ttl){   //initialize an empty cache in RAM.
     return 0;
 }
 int cache_fetch(const char* url){
-    std::lock_guard<std::mutex> lock(cache_mutex);  //let's lock the hashtable
+    std::lock_guard<std::mutex> lock(cache_mutex);  //lock the hashtable
     auto it=hashtable.find(url);    //hashtable.find() returns an iterator.
     if (it==hashtable.end()){
         return 0;
@@ -48,6 +48,4 @@ int cache_fetch(const char* url){
     }
 
 }
-int cache_insert(){
-
-}
+//int cache_insert(){}
