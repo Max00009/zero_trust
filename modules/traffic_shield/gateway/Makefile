@@ -24,14 +24,14 @@ all: $(TARGET)
 #Build gateway shared ibrary
 $(TARGET): $(SOURCE) $(HEADER)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(SOURCE) -o $(TARGET) $(CACHE_LIB) $(DECISION_LIB)
-	@echo "✓ Built $(TARGET) successfully!"
+	@echo "+ Built $(TARGET) successfully!"
 
 #Delete so file
 clean:
 	rm -f $(TARGET)
-	@echo "✓ Cleaned build files"
+	@echo "+ Cleaned build files"
 
 
 #Test all
 test: all
-	@echo "✓ Built $(TARGET) successfully!"
+	@echo "+ Built $(TARGET) successfully!"

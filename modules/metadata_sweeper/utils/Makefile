@@ -14,6 +14,6 @@ clean:
 # Test if library loads
 test: file_detector.so
 	@echo "Testing libfile_detector.so..."
-	@python3 -c "import ctypes; lib = ctypes.CDLL('./libfile_detector.so'); print('✓ Library loaded successfully!')"
+	@python3 -c "import ctypes; lib = ctypes.CDLL('./libfile_detector.so'); print('+ Library loaded successfully!')"
 
 .PHONY: clean test

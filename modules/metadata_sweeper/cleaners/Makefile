@@ -30,7 +30,7 @@ clean:
 	rm -f $(IMAGE_TARGET) $(VIDEO_TARGET) $(PDF_TARGET)
 # Test all
 test: all
-	@echo "✓ image_cleaner compiled successfully!"
-	@echo "✓ video_cleaner compiled successfully!"
-	@echo "✓ pdf_cleaner compiled successfully!"
-	@echo "✓ audio_cleaner compiled successfully!"
+	@echo "+ image_cleaner compiled successfully!"
+	@echo "+ video_cleaner compiled successfully!"
+	@echo "+ pdf_cleaner compiled successfully!"
+	@echo "+ audio_cleaner compiled successfully!"
