@@ -62,14 +62,10 @@ class Urlsubmit:
     #called before sending to server.
     def request(self,flow:http.HTTPFlow):
         url=flow.request.pretty_url
-        url_id=gateway.gateway_submit(url.encode('utf-8'))
-        #we have to somehow make the process wait untill it's result is stored in decision_engine/decision.cpp hashtable
-        #or may be we can loop the get_decision function until it get's a bool.but that might cause overhead.
-        #may be if the key,pair value is not found we can sleep for sometime and then query again.
-        result=decision.get_decision(url_id)
+        decision=gateway.gateway_submit(url.encode('utf-8'))
         #allow/block logic.
         #ui for block
         with open(self.log_file,'a') as f:
-            f.write(f"url id={url_id} has been submitted.\n")
+            f.write(f"{url} has been submitted.\n")
 
 addons=[Urlsubmit()]#This tells mitmproxy to use this addon.
