@@ -17,20 +17,17 @@ ttl=config.TIME_TO_LIVE
 #load all shared object file. 
 #i don't want to hardcode the path.I will use relative path.
 current_dir=os.path.dirname(os.path.abspath(__file__)) #current directory
-lib_path_gateway=os.path.join(current_dir,'gateway','gateway.so') #get the relative path.gateway is subdirectory and gateway.so is the shared object.
+lib_path_gateway=os.path.join(current_dir,'gateway','libgateway.so') #get the relative path.gateway is subdirectory and gateway.so is the shared object.
 gateway=ctypes.CDLL(lib_path_gateway) #now it will work from anywhere
-lib_path_cache=os.path.join(current_dir,'cache','cache.so')
+lib_path_cache=os.path.join(current_dir,'cache','libcache.so')
 cache=ctypes.CDLL(lib_path_cache)
-lib_path_decision=os.path.join(current_dir,'decision_engine','decision.so')
-decision=ctypes.CDLL(lib_path_decision)
+
 
 #now we have to define function signature. i.e. what every function takes as arguments and what they returns.
 gateway.gateway_init.argtypes=[ctypes.c_int,ctypes.c_int]
 gateway.gateway_init.restype=ctypes.c_int
 gateway.gateway_submit.argtypes=[ctypes.c_char_p]
 gateway.gateway_submit.restype=ctypes.c_int
-decision.get_decision.argtypes=ctypes.c_size_t
-decision.get_decision.restype=ctypes.c_bool
 cache.cache_init.argtypes=[ctypes.c_int64]
 cache.cache_init.restype=ctypes.c_int
 
@@ -66,6 +63,6 @@ class Urlsubmit:
         #allow/block logic.
         #ui for block
         with open(self.log_file,'a') as f:
-            f.write(f"{url} has been submitted.\n")
+            f.write(f"{url}\n{decision}\n")
 
 addons=[Urlsubmit()]#This tells mitmproxy to use this addon.
