@@ -5,4 +5,5 @@
 bool decision_making(size_t threat_intelligence_score){
     //logic for decision.
     bool decision=(threat_intelligence_score>(size_t)7)?true:false;
+    return decision;
 }
