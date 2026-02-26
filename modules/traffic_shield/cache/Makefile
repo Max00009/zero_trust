@@ -8,7 +8,7 @@ CXXFLAGS= -std=c++17 -fPIC -Wall -Wextra -O2
 LDFLAGS= -shared -pthread
 
 #targets
-TARGET=cache.so
+TARGET=libcache.so
 #sources
 SOURCE=cache.cpp
 HEADER=cache.h

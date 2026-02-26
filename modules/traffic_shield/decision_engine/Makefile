@@ -8,7 +8,7 @@ CXXFLAGS= -std=c++17 -fPIC -Wall -Wextra -O2
 LDFLAGS= -shared -pthread
 
 #targets
-TARGET=decision.so
+TARGET=libdecision.so
 #sources
 SOURCE=decision.cpp
 HEADER=decision.h
