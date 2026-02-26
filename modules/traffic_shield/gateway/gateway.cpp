@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <fstream> //just for testing.
 #include <unordered_map>
+#include <atomic> //for atomic type.
 
 struct Task{
     size_t id; //every url will have it's own id so we can track
@@ -26,7 +27,7 @@ static std::vector<std::thread> worker_threads; //vector that contains worker th
 
 size_t thread_count;
 size_t queue_length;
-size_t url_id=1;
+std::atomic<size_t> url_id=1; //atomic to make it thread-safe.without atomic,if two thread called it at same time they both might get 1 as starting value.
 bool gateway_open;
 
 //we will create a unordered_map here to store <id,decision>.
@@ -39,7 +40,7 @@ int url_analizer(Task task){
         std::ofstream Logfile("delete_also.txt",std::ios::app);
         Logfile<<task.id <<" url analizer working.."<<std::endl;
     }
-    return 0;
+    return true;
 }
 
 int threat_intelligence_module(Task task){
@@ -48,7 +49,7 @@ int threat_intelligence_module(Task task){
         std::ofstream Logfile("delete_also.txt",std::ios::app);
         Logfile<<task.id <<" threat intelligence module working.."<<std::endl;
     }
-    return 0;
+    return (size_t)8;
 }
 //this function will look into result_hashtable and fetch decision.
 void update_hashtable(size_t url_id,bool decision){
@@ -59,6 +60,7 @@ void update_hashtable(size_t url_id,bool decision){
         std::unique_lock<std::mutex> lock(result_hashtable_mutex);  
         result_hashtable.try_emplace(url_id,decision); //insert the id and result.
     }
+    result_cv.notify_all();
 }
 void worker_function(){
     while (true){
@@ -70,7 +72,7 @@ void worker_function(){
             when cv.notify_one() or cv.notify_all() occurs->thread wakes up->locks mutex->checks if predication is true.if it is true then therad proceeds.if it's false then->unlocks mutex-> thread goes to sleep again.
             */
             task_cv.wait(lock,[]{ return !task_queue.empty();}); //[] part is a lambda/anonymous function that doesn't capture anything.it just returns the bool.
-            task=task_queue.front();
+            task=std::move(task_queue.front()); //instead of copying,we move.
             task_queue.pop();
         }
         //we will call cache_fetch() here.if found we will continue with next loop.if not proceed for next step.
@@ -114,23 +116,19 @@ int gateway_submit(const char* url){
     //create a new Task
     Task new_task;
     new_task.url=url;   //here const char* is being converted into std::string.
+    new_task.id=url_id++;
+    size_t request_id=new_task.id; //we are keeping a copy of id cause later we will std::move(new_task) so we can't access it's id directly.
     {
         std::lock_guard<std::mutex> lock(queue_mutex);//lock mutex to protect access to shared resources(task_queue).
         //check if queue is full
         if (task_queue.size()>queue_length){
             return -1; //means queue is full.we might later add a wait and retry here.
         }
-        //even tho our threads are not sharing this resource
-        //we have to lock this cause mitmproxy calls multiple thread(async).
-        //it can call gate_submit() for two url at the sametime.
-        new_task.id=url_id++; //give id
-
         //add the  created task into queue.
         //we have to lock this cause our therads are reading from task_queue.
-        task_queue.push(new_task);
+        task_queue.push(std::move(new_task)); //to avoid copying.
     
     }
-    size_t request_id=new_task.id;
     //notify sleeping therads that a new task is availbale.
     task_cv.notify_one();//we are doing this to improve cpu performance.this will make sleeping thread wake up in worker_function().
 
@@ -150,7 +148,9 @@ int gateway_submit(const char* url){
             bool decision=node.mapped();
             return decision?1:0; //we have to return int cause that's what our signature is.
         }
+        return -1;
     }
+    return -1;
 }
 
 
