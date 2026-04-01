@@ -1,6 +1,7 @@
 """
 This is addon of mitmproxy.
-Usage: mitmweb -s entry_point.py --listen-host 0.0.0.0 --listen-port 8080
+Usage: mitmweb -s entry_point.py --listen-host 0.0.0.0 --listen-port 8080 .(optional web port)
+run this^ before turning on proxy.idk why doing opposite causing repeated client disconnection.
 """
 from mitmproxy import http # type: ignore cause mitmproxy is not installed in my mac.it's in vm.
 from datetime import datetime
@@ -35,7 +36,14 @@ cache.cache_init.restype=ctypes.c_int
 
 class Urlsubmit:
     def __init__(self):
-        self.log_file="logs.txt"
+
+        #self.log_file="logs.txt" DELETE
+
+        #load the UI for blocked or error response.
+        self.blocked_ui_path=os.path.join(os.path.dirname(os.path.abspath(__file__)),"ui","blocked.html")
+        self.error_ui_path=os.path.join(os.path.dirname(os.path.abspath(__file__)),"ui","error.html")
+        self.queue_full_ui_path=os.path.join(os.path.dirname(os.path.abspath(__file__)),"ui","queue_full.html")
+
     #load is called once at startup.
     def load(self,loader):#not using loader right now.may be later useful.
         #First we initialize the gateway.
@@ -53,16 +61,60 @@ class Urlsubmit:
         else:
             print("Cache initiation failed.")
         
-        with open(self.log_file,'a') as f:
-            time=datetime.now()
-            f.write(f"Starting url submission at {time}...\n")
+        # DELETE
+        # with open(self.log_file,'a') as f:
+        #     time=datetime.now()
+        #     f.write(f"Starting url submission at {time}...\n")
+
     #called before sending to server.
     def request(self,flow:http.HTTPFlow):
         url=flow.request.pretty_url
         decision=gateway.gateway_submit(url.encode('utf-8'))
         #allow/block logic.
-        #ui for block
-        with open(self.log_file,'a') as f:
-            f.write(f"{url}\n{decision}\n")
+        if decision==0:
+            #Load the blocked.html
+            try:
+                with open(self.blocked_ui_path,'r',encoding='utf-8') as f:
+                    blocked=f.read()
+            except FileNotFoundError:
+                blocked=f.read()
+
+            flow.response=http.Response.make(
+                403, #Forbidden
+                blocked,
+                {"Content-Type":"text/html"}
+            )
+        elif decision==-1:
+            #Load the queue_full.html
+            try:
+                with open(self.queue_full_ui_path,'r',encoding='utf-8') as f:
+                    queue_full=f.read()
+            except FileNotFoundError:
+                queue_full=f.read()
+
+            flow.response=http.Response.make(
+                429, #Too many requests
+                queue_full,
+                {"Content-Type":"text/html"}
+            )
+        elif decision==-2:
+            #Load error.html
+            try:
+                with open(self.error_ui_path,'r',encoding='utf-8') as f:
+                    error=f.read()
+            except FileNotFoundError:
+                error=f.read()
+
+            flow.response=http.Response.make(
+                520, #Unknown error
+                error,
+                {"Content-Type":"text/html"}
+            )
+        else:
+            pass
+
+        #DELETE
+        # with open(self.log_file,'a') as f:
+        #     f.write(f"{url}\n{decision}\n")
 
 addons=[Urlsubmit()]#This tells mitmproxy to use this addon.
