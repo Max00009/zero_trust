@@ -2,7 +2,7 @@
 #i have to clean this code later.
 #compiler and flags
 CXX= g++
-#-std=c++17 required for lambda fiunction and node deletion in hashtable.
+#-std=c++17 required for lambda function and node deletion in hashtable.
 #fPIC=position independent code.
 #O2=optimization level 2.
 #Wall=warnings all.
