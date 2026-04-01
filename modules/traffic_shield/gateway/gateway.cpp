@@ -40,7 +40,7 @@ int url_analizer(Task task){
         std::ofstream Logfile("delete_also.txt",std::ios::app);
         Logfile<<task.id <<" url analizer working.."<<std::endl;
     }
-    return true;
+    return false;
 }
 
 int threat_intelligence_module(Task task){
@@ -83,6 +83,8 @@ void worker_function(){
             //and then continue with next task.
             continue;
         }
+
+
         //just for debugging.main logic will be added later.
         bool result_of_url_analysis=url_analizer(task);
         if(result_of_url_analysis!=true){
@@ -94,6 +96,8 @@ void worker_function(){
         size_t result_of_threat_intelligence_module=threat_intelligence_module(task);
         bool decision=decision_making(result_of_threat_intelligence_module);//decision_engine will take scores.
         update_hashtable(task.id,decision);
+
+
         //then we will call cache_insert() to update.
         
     }
@@ -148,9 +152,9 @@ int gateway_submit(const char* url){
             bool decision=node.mapped();
             return decision?1:0; //we have to return int cause that's what our signature is.
         }
-        return -1;
+        return -2;
     }
-    return -1;
+    return -2;
 }
 
 
