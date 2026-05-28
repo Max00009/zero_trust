@@ -69,7 +69,11 @@ class Urlsubmit:
     #called before sending to server.
     def request(self,flow:http.HTTPFlow):
         url=flow.request.pretty_url
-        decision=gateway.gateway_submit(url.encode('utf-8'))
+        #before submitting the url which is a string object we have to convert it to byte object.
+        #that's why I did url.encode('utf-8')
+        decision=gateway.gateway_submit(url.encode('utf-8')) #This is the point where we jump to gateway.cpp
+        
+        
         #allow/block logic.
         if decision==0:
             #Load the blocked.html
@@ -77,7 +81,7 @@ class Urlsubmit:
                 with open(self.blocked_ui_path,'r',encoding='utf-8') as f:
                     blocked=f.read()
             except FileNotFoundError:
-                blocked=f.read()
+                blocked="<h1>Blocked</h1>"
 
             flow.response=http.Response.make(
                 403, #Forbidden
@@ -90,7 +94,7 @@ class Urlsubmit:
                 with open(self.queue_full_ui_path,'r',encoding='utf-8') as f:
                     queue_full=f.read()
             except FileNotFoundError:
-                queue_full=f.read()
+                queue_full="<h1>Queue Full</h1>"
 
             flow.response=http.Response.make(
                 429, #Too many requests
@@ -103,7 +107,7 @@ class Urlsubmit:
                 with open(self.error_ui_path,'r',encoding='utf-8') as f:
                     error=f.read()
             except FileNotFoundError:
-                error=f.read()
+                error="<h1>Something went wrong</h1>"
 
             flow.response=http.Response.make(
                 520, #Unknown error
