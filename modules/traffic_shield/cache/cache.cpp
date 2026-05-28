@@ -38,7 +38,7 @@ int cache_init(int max_size,int64_t ttl){   //initialize an empty cache in RAM.
 
     return 0;
 }
-int cache_fetch(const char* url){
+int cache_fetch(const std::string& url){ //as we are not going to modify or move ownership of the url,we are passing by reference instead of passing by value.No copy made.No memory allocation.
     std::lock_guard<std::mutex> lock(cache_mutex);  //lock the hashtable
     auto it=hashtable.find(url);    //hashtable.find() returns an iterator.
     if (it==hashtable.end()){
@@ -46,6 +46,5 @@ int cache_fetch(const char* url){
     }else{
         return it->second->threat_score;    //we extract the value from iterator.and then extract threat_score from the value.
     }
-
 }
 //int cache_insert(){}
