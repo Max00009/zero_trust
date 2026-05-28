@@ -51,7 +51,7 @@ int threat_intelligence_module(Task task){
     }
     return (size_t)8;
 }
-//this function will look into result_hashtable and fetch decision.
+//this function will look into result_hashtable(which is an unordered map) and fetch decision.
 void update_hashtable(size_t url_id,bool decision){
     //we have to use try_emplace() to insert key value pair.
     //cause it avoids copying so it's efficient.
@@ -62,6 +62,7 @@ void update_hashtable(size_t url_id,bool decision){
     }
     result_cv.notify_all();
 }
+
 void worker_function(){
     while (true){
         Task task;
@@ -76,9 +77,9 @@ void worker_function(){
             task_queue.pop();
         }
         //we will call cache_fetch() here.if found we will continue with next loop.if not proceed for next step.
-        if(cache_fetch(task.url.c_str())!=0){
+        if(cache_fetch(task.url)!=0){
             //we are storing only 'safe' url in cache.so if a url is found in cache,it means it's safe from previous scan.so we just let it pass.
-            //here we will send this url_id,true to update_hashtable function which is in decision.h
+            //here we will send this url_id,true to update_hashtable function.
             update_hashtable(task.id,true);
             //and then continue with next task.
             continue;
@@ -98,7 +99,7 @@ void worker_function(){
         update_hashtable(task.id,decision);
 
 
-        //then we will call cache_insert() to update.
+        //then we will call cache_insert() to update the cache.
         
     }
 }
@@ -128,7 +129,7 @@ int gateway_submit(const char* url){
         if (task_queue.size()>queue_length){
             return -1; //means queue is full.we might later add a wait and retry here.
         }
-        //add the  created task into queue.
+        //otherwise add the  created task into queue.
         //we have to lock this cause our therads are reading from task_queue.
         task_queue.push(std::move(new_task)); //to avoid copying.
     
@@ -152,9 +153,9 @@ int gateway_submit(const char* url){
             bool decision=node.mapped();
             return decision?1:0; //we have to return int cause that's what our signature is.
         }
-        return -2;
+        return -2;//our code will never reach this point.It's just to fix compier static analysis error.
     }
-    return -2;
+    return -2;//our code will never reach this point.It's just to fix compier static analysis error.
 }
 
 
