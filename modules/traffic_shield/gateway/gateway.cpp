@@ -104,9 +104,9 @@ void worker_function(){
     }
 }
 
-int gateway_init(int max_thread_count,int max_queue_length){
-    thread_count=max_thread_count;
-    queue_length=max_queue_length;
+int gateway_init(size_t number_of_threads,size_t length_of_queue){
+    thread_count=number_of_threads;
+    queue_length=length_of_queue;
     gateway_open=true;
     for (size_t i=0;i<thread_count;i++){
         worker_threads.emplace_back(worker_function);//we are using emplace_back to create a thread directly and then push_back to worker_threads vector.
