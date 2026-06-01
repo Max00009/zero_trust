@@ -1,12 +1,13 @@
 #ifndef CACHE_H
 #define CACHE_H
-#include <cstdint>//for int64_t
+#include <stddef.h> //for size_t
+#include <cstdint> //for int64_t
 
 #ifdef __cplusplus
 extern "C"{
 #endif
 //our functions declarations will be here.
-int cache_init(int max_size,int64_t ttl);   //returns 0 if successful.
+int cache_init(size_t max_size,int64_t ttl);   //returns 0 if successful.
 
 
 #ifdef __cplusplus
