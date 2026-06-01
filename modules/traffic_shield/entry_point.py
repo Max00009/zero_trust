@@ -25,11 +25,11 @@ cache=ctypes.CDLL(lib_path_cache)
 
 
 #now we have to define function signature. i.e. what every function takes as arguments and what they returns.
-gateway.gateway_init.argtypes=[ctypes.c_int,ctypes.c_int]
+gateway.gateway_init.argtypes=[ctypes.c_size_t,ctypes.c_size_t]
 gateway.gateway_init.restype=ctypes.c_int
 gateway.gateway_submit.argtypes=[ctypes.c_char_p]
 gateway.gateway_submit.restype=ctypes.c_int
-cache.cache_init.argtypes=[ctypes.c_int64]
+cache.cache_init.argtypes=[ctypes.c_size_t,ctypes.c_int64]
 cache.cache_init.restype=ctypes.c_int
 
 
