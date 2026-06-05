@@ -34,15 +34,15 @@ bool gateway_open;
 static std::unordered_map<size_t,bool> result_hashtable;
 static std::mutex result_hashtable_mutex;
 
-int url_analizer(Task task){
+//below two functions are just dummy.main function will be defined in respective file.
+int url_analizer(std::string url){
     {
         std::lock_guard<std::mutex> lock(log_file_mutex);
         std::ofstream Logfile("delete_also.txt",std::ios::app);
-        Logfile<<task.id <<" url analizer working.."<<std::endl;
+        //Logfile<<task.id <<" url analizer working.."<<std::endl;
     }
     return false;
 }
-
 int threat_intelligence_module(Task task){
     {
         std::lock_guard<std::mutex> lock(log_file_mutex);
@@ -51,6 +51,9 @@ int threat_intelligence_module(Task task){
     }
     return (size_t)8;
 }
+
+
+
 //this function will look into result_hashtable(which is an unordered map) and fetch decision.
 void update_hashtable(size_t url_id,bool decision){
     //we have to use try_emplace() to insert key value pair.
@@ -87,7 +90,7 @@ void worker_function(){
 
 
         //just for debugging.main logic will be added later.
-        bool result_of_url_analysis=url_analizer(task);
+        bool result_of_url_analysis=url_analizer(task.url);//we are passing the url only.
         if(result_of_url_analysis!=true){
             //if there's something wrong with url then we block immedately.
             update_hashtable(task.id,false);
