@@ -16,6 +16,25 @@ ParsedURL URLParser::parse(std::string_view raw_url){
     result.original_url=raw_url;
     result.parse_successfull=true; //always true unless found anomaly.
     //now we will trim the raw_url.
+    trim_url(raw_url);
+
+    return result;
 }
 
 //define the trim function
+void URLParser::trim_url(std::string_view& url){
+    while (!url.empty() && std::isspace(url.front())){ //just a double check on empty string.
+        url.remove_prefix(1);
+    }
+    while (!url.empty() && std::isspace(url.back())){ //just a double check on empty string.
+        url.remove_suffix(1);
+    }
+}
+
+//NOT RELATED TO THIS CODE.IGNORE
+//I just learnt that 'static' holds different purpose based on how is it used.
+//if static is in front of a variable:"create this variable once and keep it alive for the entire program. Don't recreate it every time the function is called"
+//if static is in front of a function inside a class:"This function does not depend on any object state. Give it an input, it gives you an output.We don't need to create an object to use this function"
+//if static is in front of a free function:"this function only exists inside this file. No other file can see or call it."
+//just put it here cause I don't know where to write this down.
+
