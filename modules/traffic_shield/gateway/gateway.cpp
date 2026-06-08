@@ -35,7 +35,7 @@ static std::unordered_map<size_t,bool> result_hashtable;
 static std::mutex result_hashtable_mutex;
 
 //below two functions are just dummy.main function will be defined in respective file.
-int url_analizer(std::string url){
+int url_analyzer(std::string url){
     {
         std::lock_guard<std::mutex> lock(log_file_mutex);
         std::ofstream Logfile("delete_also.txt",std::ios::app);
@@ -90,7 +90,7 @@ void worker_function(){
 
 
         //just for debugging.main logic will be added later.
-        bool result_of_url_analysis=url_analizer(task.url);//we are passing the url only.
+        bool result_of_url_analysis=url_analyzer(task.url);//we are passing the url only.
         if(result_of_url_analysis!=true){
             //if there's something wrong with url then we block immedately.
             update_hashtable(task.id,false);
