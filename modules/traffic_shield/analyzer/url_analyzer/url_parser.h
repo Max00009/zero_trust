@@ -68,7 +68,9 @@ private:
     //helper functions will live here
 
     //NOTE:explain how we will modify the string even tho we are taking std::string_view.
-    static void trim_url(std::string_view& raw_url);//this function will remove all white-spaces from our url.
+    //we can't modify the characters inside our string cause std::string_view is read only.
+    //HOwever we can change where it points and how long it is.so we can just move the boundaries of the view, not touching the original string.
+    static void trim_url(std::string_view& raw_url);//this function will remove all white-spaces from our url.We are passing by reference cause we don't want own copy.We want to trim the original copy.
 
 };
 
