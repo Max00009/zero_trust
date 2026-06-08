@@ -3,7 +3,11 @@
 //Static Analysis
 //Heuristic Analysis
 
-int url_analizer(std::string url){ //we receive a std::string.
+bool url_analyzer(std::string url){ //we receive a std::string.
+    //first let's do a safety check to see if the string is empty.
+    if (url.empty()){
+        return false;
+    }
     //first we hwave to parse the url via the public parse() function.
     ParsedURL result=URLParser::parse(url);
 }
