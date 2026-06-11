@@ -4,9 +4,10 @@
 #include <regex>
 #include <string>
 #include <string_view>
-#include <algorithm>
+#include <algorithm> //for std::transform
 #include <vector>
 #include <map>
+#include <cctype> //for std::tolower
 
 //public function parse()
 //btw I am using std::string_view as argument instead of std::string cause all the actions we will perform are read-only(except the trim i guess which I am gonna explain below).
@@ -17,6 +18,12 @@ ParsedURL URLParser::parse(std::string_view raw_url){
     result.parse_successfull=true; //always true unless found anomaly.
     //now we will trim the raw_url.
     trim_url(raw_url);
+
+    //now extract scheme
+    set_scheme(raw_url,result);
+    //now check if the scheme is safe.access result.scheme
+    //create a whitelist.and compare.
+    //handle '://' and ':' case accordingly.
 
     return result;
 }
@@ -38,3 +45,20 @@ void URLParser::trim_url(std::string_view& url){
 //if static is in front of a free function:"this function only exists inside this file. No other file can see or call it."
 //just put it here cause I don't know where to write this down.
 
+//define get_scheme function
+void URLParser::set_scheme(std::string_view& raw_url,ParsedURL& result){
+    size_t pos=raw_url.find(':');
+    if (pos!=std::string_view::npos && pos!=0){
+        result.scheme=raw_url.substr(0,pos);
+        //we could have convert our scheme to lowercase but that would require us to declare scheme as std::string cause we are modifying it.
+        //However that will cause heap allocation that I don't want.
+        //so we will keep our scheme as it is.and later during comparision will convert each character to lower on the fly.
+        //remember converting each character on fly is possible with std::string_view cause that way we are not storing the modified version.just picking a char and lower casing to compare and delete.
+        
+        raw_url.remove_prefix(pos+1); //to advance the raw url after extracting.
+    
+    }else{
+        result.parse_successfull=false;
+    }
+    
+}
