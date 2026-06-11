@@ -93,6 +93,7 @@ void worker_function(){
         bool result_of_url_analysis=url_analyzer(task.url);//we are passing the url only.
         if(result_of_url_analysis!=true){
             //if there's something wrong with url then we block immedately.
+            //NOTE:later I have add the feature to show the reason of failure in blocked.html
             update_hashtable(task.id,false);
             //and then continue with next task.
             continue;
