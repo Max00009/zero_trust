@@ -8,22 +8,38 @@
 #include <vector>
 #include <map>
 #include <cctype> //for std::tolower
+#include <unordered_set>
 
 //public function parse()
 //btw I am using std::string_view as argument instead of std::string cause all the actions we will perform are read-only(except the trim i guess which I am gonna explain below).
 //in that case std::string_view makes our code faster cause it doesn't required copying.
 ParsedURL URLParser::parse(std::string_view raw_url){
-    ParsedURL result;   //first create an instance of ParsedURL object.
-    result.original_url=raw_url;
-    result.parse_successfull=true; //always true unless found anomaly.
+    ParsedURL result; //first create an instance of ParsedURL object.
+    result.original_url=raw_url; //keep an original copy.
     //now we will trim the raw_url.
     trim_url(raw_url);
 
     //now extract scheme
     set_scheme(raw_url,result);
+    //create a whitelist and compare.
+    static const std::unordered_set<std::string_view> allowed_schemes={
+        "http","https" //add other schemes 
+    };
+    //should I also make a bad_schemes{} set?I don't know yet.
     //now check if the scheme is safe.access result.scheme
-    //create a whitelist.and compare.
-    //handle '://' and ':' case accordingly.
+    if (allowed_schemes.count(result.scheme)){ //for unique keys count() will return 0 if not found.otherwise 1.
+        result.is_scheme_safe=true;
+    }
+
+    //now check if host is present.
+    is_host_present(raw_url,result);
+
+    //NEXT TASK:look for if parse_successful=false
+
+
+
+    //I DON'T KNOW HOW WILL I HANDLE URL THAT HAS URL INSIDE IT.
+
 
     return result;
 }
@@ -61,4 +77,14 @@ void URLParser::set_scheme(std::string_view& raw_url,ParsedURL& result){
         result.parse_successfull=false;
     }
     
+}
+
+void URLParser::is_host_present(std::string_view& raw_url,ParsedURL& result){
+    //To check if our current state of raw_url starts with "//" I will use starts_with() member function.
+    //C++20 is required.compile with -std=c++20 .
+    if (raw_url.starts_with("//")){ //starts_with() automatically handles the case where the view is shorter than 2 characters.will return false in that case.
+        result.has_host=true;
+        raw_url.remove_prefix(2); //advance after "//" .
+    };
+
 }
