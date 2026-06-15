@@ -21,7 +21,7 @@ struct ParsedURL{
     std::string_view password;
 
     //host
-    bool has_host; //if host is present then '://' is used after scheme name.if host not present then only ':' used.
+    bool has_host=false; //if host is present then '://' is used after scheme name.if host not present then only ':' used.
     std::string_view full_host; //e.g.  "mail.google.com"  (no port)
     std::string_view subdomain; //e.g.  "mail"
     std::string registered_domain; //e.g.  "google.com"   (eTLD+1).We have to use std::string here cause we will have to lowercase it.
@@ -53,7 +53,7 @@ struct ParsedURL{
     bool has_at_in_host=false;  //if @ present in host name.old trick.
 
     //status
-    bool parse_successfull=false;   //false if url is fundamentally malformed.
+    bool parse_successfull=true;   //false if url is fundamentally malformed.
 
 };
 
@@ -71,9 +71,9 @@ private:
     //NOTE:explain how we will modify the string even tho we are taking std::string_view.
     //we can't modify the characters inside our string cause std::string_view is read only.
     //HOwever we can change where it points and how long it is.so we can just move the boundaries of the view, not touching the original string.
-    static void trim_url(std::string_view& raw_url);//this function will remove all white-spaces from our url.We are passing by reference cause we don't want own copy.We want to trim the original copy.
-    static void set_scheme(std::string_view& raw_url,ParsedURL& result);//this function will detect the first occurence of ':' and extract the scheme name.
-
+    static void trim_url(std::string_view& raw_url); //this function will remove all white-spaces from our url.We are passing by reference cause we don't want own copy.We want to trim the original copy.
+    static void set_scheme(std::string_view& raw_url,ParsedURL& result); //this function will detect the first occurence of ':' and extract the scheme name.
+    static void is_host_present(std::string_view& raw_url,ParsedURL& result); //this function will check if '//' is present after ':'.
 
 
 
