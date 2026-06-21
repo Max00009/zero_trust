@@ -94,7 +94,7 @@ void worker_function(){
         if(result_of_url_analysis!=true){
             //if there's something wrong with url then we block immedately.
 
-            //NOTE:later I have add the feature to show the reason of failure in blocked.html
+            //NOTE:LATER I HAVE TO ADD WHY IT FAILED AND ADD IN ERROR OR WARNING.HTML
             
             update_hashtable(task.id,false);
             //and then continue with next task.
