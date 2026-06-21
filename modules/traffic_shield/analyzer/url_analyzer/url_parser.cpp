@@ -21,22 +21,22 @@ ParsedURL URLParser::parse(std::string_view raw_url){
 
     //now extract scheme
     set_scheme(raw_url,result);
-    //create a whitelist and compare.
-    static const std::unordered_set<std::string_view> allowed_schemes={
-        "http","https" //add other schemes 
-    };
-    //should I also make a bad_schemes{} set?I don't know yet.
-    //now check if the scheme is safe.access result.scheme
-    if (allowed_schemes.count(result.scheme)){ //for unique keys count() will return 0 if not found.otherwise 1.
-        result.is_scheme_safe=true;
+    //if no scheme found then set_scheme will set 'parse_successfull=false'
+    //and at that point further parsing doesn't make any sense.so we will terminate.
+    if (!result.parse_successfull){
+        return result;
     }
 
+    //now I will check if scheme is safe or not
+    scheme_checker(result);
+
+
     //now check if host is present.
-    is_host_present(raw_url,result);
+    detect_host(raw_url,result);
+    // IF HOST NOT PRESENT I HAVE TO HANDLE RELATIVE PATH CASES.
 
-    //NEXT TASK:look for if parse_successful=false
-
-
+    //now extract credentials if present
+    credential_extractor(raw_url,result);
 
     //I DON'T KNOW HOW WILL I HANDLE URL THAT HAS URL INSIDE IT.
 
@@ -79,12 +79,85 @@ void URLParser::set_scheme(std::string_view& raw_url,ParsedURL& result){
     
 }
 
-void URLParser::is_host_present(std::string_view& raw_url,ParsedURL& result){
+//define scheme_checker function
+void URLParser::scheme_checker(ParsedURL& result){
+    //first let's create a whitelist
+    static const std::unordered_set<std::string_view> allowed_schemes={
+        "http","https" //I will add other schemes later if needed
+    };
+    //should I also make a bad_schemes{} set?I don't know yet.
+    //now check if the scheme is safe.access result.scheme
+    if (allowed_schemes.count(result.scheme)){ //for unique keys count() will return 0 if not found.otherwise 1.
+        result.is_scheme_safe=true;
+    }
+}
+
+//define detect_host function
+void URLParser::detect_host(std::string_view& raw_url,ParsedURL& result){
     //To check if our current state of raw_url starts with "//" I will use starts_with() member function.
     //C++20 is required.compile with -std=c++20 .
     if (raw_url.starts_with("//")){ //starts_with() automatically handles the case where the view is shorter than 2 characters.will return false in that case.
-        result.has_host=true;
+        //I have to handle an edge case where after scheme there is '///'.example: file:///home/user/document.pdf. 
+        //in that case we will enter this if branch but then we have to check if next character is also '/' . if it is then host not present.
+        //if not then there is only '//' after scheme and that means host present.
+        if (raw_url.size()>2 && raw_url[2]=='/'){
+            result.has_host=false;
+        } //we don't need any else cause value of has_host is true by default.
         raw_url.remove_prefix(2); //advance after "//" .
+    }else{
+        result.has_host=false; //we enter this else branch when there is no '//'. so there is no question of host being present.
     };
+
+}
+
+//define credential_checker function
+void URLParser::credential_extractor(std::string_view& raw_url,ParsedURL& result){
+    /*
+    this is a basic structure of url with host: http://username:password@example.com/path
+    to check if creds is present I will check if there is any '@' before next '/'.
+    to do that first we have to locate next '/'.then look for '@' before it.
+    but if we don't find any '/' then we will look for '@' in the whole remaining part anyway.e.g. "user:pass@mail.google.com". there is no '/'.
+    here is a flowchart i am trying to build that shows possible outcomes:
+                        
+    look for next '/'---> if found then look for '@' before that '/'.if not found then look for '@' in the whole part.
+    if we find '@'----> we extract everything before it as creds.if we don't find any '@' there ain't no creds and we do nothing.
+    after extracting creds we look for ':'--->if found then we take the part before ':' as username and after ':' as password.if ':' not found then take everything as username.
+
+    */
+
+    //find position of next '/'
+    size_t slash_pos=raw_url.find('/');
+    if (slash_pos==0) return; //that means it's a '///' edge case.there will be no credentials.so no need to proceed further.
+    
+    //set the searching range
+    size_t boundary=(slash_pos==std::string_view::npos)?raw_url.size():slash_pos;
+    //search for '@'
+    size_t at_the_pos=raw_url.substr(0,boundary).find('@');
+    
+    if (at_the_pos==std::string_view::npos){
+        return; //cause no creds
+    }else{
+        result.has_at_in_host=true;
+        if(at_the_pos!=0){
+            result.has_credentials=true;
+        }
+        if (result.has_at_in_host && !result.has_credentials){
+            result.blank_creds=true;
+        }
+        if (result.has_credentials){
+            //NEXT TASK:add logic to extract username and password from credentials.
+            //the reason we are extracting username and password here instead of creating separate function is because after this function ends our raw_url will be pointed at next character after '@'.We will loose the creds.
+            /*
+            NOTE:while extracting credentials we have to look for any anomaly like domainname in place of credentials.
+            like this classic attack: http://google.com@evil.com/login
+            Here there are no real "credentials" — google.com is not a username. 
+            But the browser sees @ and everything before it gets treated as credentials, so it actually navigates to evil.com. 
+            The attacker is using @ to make you think you're going to google.com.
+            */
+        }
+
+        raw_url.remove_prefix(at_the_pos+1); // overtake the '@'
+    
+    }
 
 }
