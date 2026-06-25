@@ -33,12 +33,12 @@ ParsedURL URLParser::parse(std::string_view raw_url){
 
     //now check if host is present.
     detect_host(raw_url,result);
-    // IF HOST NOT PRESENT I HAVE TO HANDLE RELATIVE PATH CASES.
+    // NOTE: IF HOST NOT PRESENT I HAVE TO HANDLE RELATIVE PATH CASES.
 
     //now extract credentials if present
     credential_extractor(raw_url,result);
 
-    //I DON'T KNOW HOW WILL I HANDLE URL THAT HAS URL INSIDE IT.
+    //NEXT TASK : check content of username to check if it mimics a domain name.
 
 
     return result;
@@ -110,7 +110,7 @@ void URLParser::detect_host(std::string_view& raw_url,ParsedURL& result){
 
 }
 
-//define credential_checker function
+//define credential_extractor function
 void URLParser::credential_extractor(std::string_view& raw_url,ParsedURL& result){
     /*
     this is a basic structure of url with host: http://username:password@example.com/path
@@ -129,10 +129,10 @@ void URLParser::credential_extractor(std::string_view& raw_url,ParsedURL& result
     size_t slash_pos=raw_url.find('/');
     if (slash_pos==0) return; //that means it's a '///' edge case.there will be no credentials.so no need to proceed further.
     
-    //set the searching range
-    size_t boundary=(slash_pos==std::string_view::npos)?raw_url.size():slash_pos;
+    //set the searching range for '@'
+    size_t boundary_to_find_at_the=(slash_pos==std::string_view::npos)?raw_url.size():slash_pos;
     //search for '@'
-    size_t at_the_pos=raw_url.substr(0,boundary).find('@');
+    size_t at_the_pos=raw_url.substr(0,boundary_to_find_at_the).find('@');
     
     if (at_the_pos==std::string_view::npos){
         return; //cause no creds
@@ -154,10 +154,23 @@ void URLParser::credential_extractor(std::string_view& raw_url,ParsedURL& result
             But the browser sees @ and everything before it gets treated as credentials, so it actually navigates to evil.com. 
             The attacker is using @ to make you think you're going to google.com.
             */
+
+            //first we will look for ':' inside credentials.
+            size_t colon_pos=raw_url.substr(0,at_the_pos).find(':');
+            //if no colon then we take everything as username
+            if (colon_pos==std::string_view::npos){
+                result.username=raw_url.substr(0,at_the_pos);
+            }else{ //colon found
+                if (colon_pos==0){ //if there is noting infront of colon
+                    result.blank_username=true;
+                }else{
+                    result.username=raw_url.substr(0,colon_pos);
+                    if ((at_the_pos-colon_pos)>1){ //cause if at_the_pos is just next of colon_pos that means there is no password
+                        result.password=raw_url.substr((colon_pos+1),at_the_pos);
+                    }
+                }
+            }
         }
-
         raw_url.remove_prefix(at_the_pos+1); // overtake the '@'
-    
     }
-
 }
