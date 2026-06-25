@@ -52,7 +52,8 @@ struct ParsedURL{
     bool is_punnycode=false;   //xn-- label in host.exploited in Homograph attacks.
     bool has_at_in_host=false;  //if @ present in host name.old trick.
     bool blank_creds=false; //'@' is present but there is blank before that.suspicious.
-
+    bool blank_username=false; //if there is nothing infront of ':' then it's suspicious.
+    bool domain_as_username=false; //this classic attack: http://google.com@evil.com/login.The attacker is using @ to make us think it's going to google.com.
     //status
     bool parse_successfull=true;   //false if url is fundamentally malformed.
 
