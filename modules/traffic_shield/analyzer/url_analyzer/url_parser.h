@@ -53,7 +53,9 @@ struct ParsedURL{
     bool has_at_in_host=false;  //if @ present in host name.old trick.
     bool blank_creds=false; //'@' is present but there is blank before that.suspicious.
     bool blank_username=false; //if there is nothing infront of ':' then it's suspicious.
+    bool blank_password=false; //i am just keeping a note of it.don't know yet if later i have to consider this.
     bool domain_as_username=false; //this classic attack: http://google.com@evil.com/login.The attacker is using @ to make us think it's going to google.com.
+    
     //status
     bool parse_successfull=true;   //false if url is fundamentally malformed.
 
@@ -78,7 +80,7 @@ private:
     static void scheme_checker(ParsedURL& result); //this function will check if the scheme is safe and set 'is_scheme_safe' bool accordingly.
     static void detect_host(std::string_view& raw_url,ParsedURL& result); //this function will check if '//' is present after ':'.
     static void credential_extractor(std::string_view& raw_url,ParsedURL& result); //thsi function will check if any credentials present in our url.
-
+    static void username_anomaly_checker(ParsedURL& result); //this function will check if the username mimics any domain name and set the value of domain_as_username bool.
 
 
 };
