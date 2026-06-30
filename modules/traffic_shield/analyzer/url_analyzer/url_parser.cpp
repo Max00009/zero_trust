@@ -38,8 +38,10 @@ ParsedURL URLParser::parse(std::string_view raw_url){
     //now extract credentials if present
     credential_extractor(raw_url,result);
 
-    //NEXT TASK : check content of username to check if it mimics a domain name.
+    //now check if username contains any domain name looking content
+    username_anomaly_checker(result);
 
+    //NEXT TASK:extract host name
 
     return result;
 }
@@ -145,7 +147,6 @@ void URLParser::credential_extractor(std::string_view& raw_url,ParsedURL& result
             result.blank_creds=true;
         }
         if (result.has_credentials){
-            //NEXT TASK:add logic to extract username and password from credentials.
             //the reason we are extracting username and password here instead of creating separate function is because after this function ends our raw_url will be pointed at next character after '@'.We will loose the creds.
             /*
             NOTE:while extracting credentials we have to look for any anomaly like domainname in place of credentials.
@@ -157,20 +158,32 @@ void URLParser::credential_extractor(std::string_view& raw_url,ParsedURL& result
 
             //first we will look for ':' inside credentials.
             size_t colon_pos=raw_url.substr(0,at_the_pos).find(':');
-            //if no colon then we take everything as username
+            //if no colon then we take everything as username and make 'blank_password=true'
             if (colon_pos==std::string_view::npos){
                 result.username=raw_url.substr(0,at_the_pos);
+                result.blank_password=true;
             }else{ //colon found
                 if (colon_pos==0){ //if there is noting infront of colon
                     result.blank_username=true;
+                    result.password=raw_url.substr(1,at_the_pos-1);
                 }else{
                     result.username=raw_url.substr(0,colon_pos);
                     if ((at_the_pos-colon_pos)>1){ //cause if at_the_pos is just next of colon_pos that means there is no password
-                        result.password=raw_url.substr((colon_pos+1),at_the_pos);
+                        result.password=raw_url.substr(colon_pos+1,at_the_pos-colon_pos-1);
+                    }else{
+                        result.blank_password=true;
                     }
                 }
             }
         }
         raw_url.remove_prefix(at_the_pos+1); // overtake the '@'
+    }
+}
+
+//define username_anomaly_checker function
+void URLParser::username_anomaly_checker(ParsedURL& result){
+    //if we find '.' inside username then we flag it.
+    if (result.username.find('.')!=std::string_view::npos){
+        result.domain_as_username=true;
     }
 }
