@@ -41,6 +41,7 @@ ParsedURL URLParser::parse(std::string_view raw_url){
     //now check if username contains any domain name looking content
     username_anomaly_checker(result);
 
+    //NEXT TASK:fix lowercase scheme problem
     //NEXT TASK:extract host name
 
     return result;
@@ -81,17 +82,47 @@ void URLParser::set_scheme(std::string_view& raw_url,ParsedURL& result){
     
 }
 
+//define is_same function
+bool URLParser::is_same(std::string_view a,std::string_view b){ //this function is a helper function to check if two string_view is same irrespective of case(upper or lower).
+    if (a.size()!=b.size()) return false; //if size doesn't match they ain't same
+    for (size_t i=0;i<a.size();i++){
+        if (std::tolower(a[i])!=std::tolower(b[i])) return false; //if one character doesn't match they ain't same.
+    }
+    return true; //otherwise they are same
+}
+
 //define scheme_checker function
 void URLParser::scheme_checker(ParsedURL& result){
     //first let's create a whitelist
     static const std::unordered_set<std::string_view> allowed_schemes={
         "http","https" //I will add other schemes later if needed
     };
-    //should I also make a bad_schemes{} set?I don't know yet.
-    //now check if the scheme is safe.access result.scheme
-    if (allowed_schemes.count(result.scheme)){ //for unique keys count() will return 0 if not found.otherwise 1.
-        result.is_scheme_safe=true;
+
+    //first we will do a size check.if the size of scheme is much larger or smaller than our whitelist schemes range then we return early.
+    //instead of hardcoding the size value I will iterate through the set and find the smallest size and biggest size.
+    static const size_t min_len=std::min_element( //std::min_element will iterate through every element in our set and use our comparator function
+        allowed_schemes.begin(), //start of set 
+        allowed_schemes.end(), //end of set
+        [](std::string_view a,std::string_view b){return a.size() < b.size() ; } //comparator lambda function.this function takes two std::string_view arguments,compare their size and return an iterator to the shorter one.
+    )->size(); //this extracts the size from the iterator
+
+    static const size_t max_len=std::max_element( //std::max_element will iterate through every element in our set and use our comparator function
+        allowed_schemes.begin(), //start of set
+        allowed_schemes.end(), //end of set 
+        [](std::string_view a,std::string_view b){return a.size() < b.size() ;} //comparator lambda function.this function takes two std::string_view arguments,compare their size and return an iterator to the bigger one.
+    )->size(); //this extracts the size from the iterator
+
+    //now that we have our size range let's do size check.
+    if (result.scheme.size()<min_len || result.scheme.size()>max_len) return; //return early.there is no point of comparing.
+
+    //now we will do a case insensitive comparison so that 'http' and 'Http' both is passed as safe scheme.
+    for (const auto& scheme:allowed_schemes){
+        if (is_same(result.scheme,scheme)){ //we will use is_same function
+            result.is_scheme_safe=true;
+            break;
+        }
     }
+    //should I also make a bad_schemes{} set?I don't know yet.
 }
 
 //define detect_host function
