@@ -81,8 +81,6 @@ private:
     static void detect_host(std::string_view& raw_url,ParsedURL& result); //this function will check if '//' is present after ':'.
     static void credential_extractor(std::string_view& raw_url,ParsedURL& result); //thsi function will check if any credentials present in our url.
     static void username_anomaly_checker(ParsedURL& result); //this function will check if the username mimics any domain name and set the value of domain_as_username bool.
-    static bool is_same(std::string_view a,std::string_view b); //this function is a helper function to check if two string_view is same irrespective of case(upper or lower).
-
 };
 
 #endif
