@@ -1,13 +1,14 @@
 //this program will break our url into different parts so we can detect any anomaly.
 //we will follow generic URL syntax defined in RFC 3986.
 #include "url_parser.h"
+#include "../utils/utils.h" //for is_same function
 #include <regex>
 #include <string>
 #include <string_view>
 #include <algorithm>
 #include <vector>
 #include <map>
-#include <cctype> //for std::tolower
+#include <cctype> //for std::isspace
 #include <unordered_set>
 
 //public function parse()
@@ -30,7 +31,6 @@ ParsedURL URLParser::parse(std::string_view raw_url){
     //now I will check if scheme is safe or not
     scheme_checker(result);
 
-
     //now check if host is present.
     detect_host(raw_url,result);
     // NOTE: IF HOST NOT PRESENT I HAVE TO HANDLE RELATIVE PATH CASES.
@@ -41,7 +41,6 @@ ParsedURL URLParser::parse(std::string_view raw_url){
     //now check if username contains any domain name looking content
     username_anomaly_checker(result);
 
-    //NEXT TASK:fix lowercase scheme problem
     //NEXT TASK:extract host name
 
     return result;
@@ -80,15 +79,6 @@ void URLParser::set_scheme(std::string_view& raw_url,ParsedURL& result){
         result.parse_successfull=false;
     }
     
-}
-
-//define is_same function
-bool URLParser::is_same(std::string_view a,std::string_view b){ //this function is a helper function to check if two string_view is same irrespective of case(upper or lower).
-    if (a.size()!=b.size()) return false; //if size doesn't match they ain't same
-    for (size_t i=0;i<a.size();i++){
-        if (std::tolower(a[i])!=std::tolower(b[i])) return false; //if one character doesn't match they ain't same.
-    }
-    return true; //otherwise they are same
 }
 
 //define scheme_checker function
