@@ -22,14 +22,17 @@ struct ParsedURL{
 
     //host
     bool has_host=true; //if host is present then '://' is used after scheme name.if host not present then only ':' used.http://[www.example.com]/path everything within [] is host.
-    std::string_view full_host; //e.g.  "mail.google.com"  (no port)
+    std::string_view full_host; //e.g.  "mail.google.com"
+    std::string_view full_host_without_port; //we strip the port if present
     std::string_view subdomain; //e.g.  "mail"
     std::string registered_domain; //e.g.  "google.com"   (eTLD+1).We have to use std::string here cause we will have to lowercase it.
     std::string_view domain_label;  //e.g.  google"   (name without TLD)
     std::string_view tld;   //e.g.  "com"  or  "co.uk"
 
     bool is_ip_address=false;
-    int subdomain_depth=0;
+    bool is_ipv4=false; //all digits and dots
+    bool is_ipv6=false; //starts with '['
+    int subdomain_depth=0; //this might come from config value.
     int port=-1;    //-1 means port not specified.
 
     //path
@@ -47,6 +50,7 @@ struct ParsedURL{
     std::string_view fragment;  //amything after #
 
     //Anomaly flags
+    bool very_long_url=false; //we can take a max length from config file and anything lengthier than that will be flagged.
     bool has_null_bytes=false;  //if %00 anywhere.
     bool double_encoding=false; //if % is also encoded(%25xx).
     bool is_punnycode=false;   //xn-- label in host.exploited in Homograph attacks.
@@ -55,7 +59,8 @@ struct ParsedURL{
     bool blank_username=false; //if there is nothing infront of ':' then it's suspicious.
     bool blank_password=false; //i am just keeping a note of it.don't know yet if later i have to consider this.
     bool domain_as_username=false; //this classic attack: http://google.com@evil.com/login.The attacker is using @ to make us think it's going to google.com.
-    
+    bool very_long_hostname=false; //we can take a max length from config file and anything lengthier than that will be flagged.
+
     //status
     bool parse_successfull=true;   //false if url is fundamentally malformed.
 
@@ -81,6 +86,7 @@ private:
     static void detect_host(std::string_view& raw_url,ParsedURL& result); //this function will check if '//' is present after ':'.
     static void credential_extractor(std::string_view& raw_url,ParsedURL& result); //thsi function will check if any credentials present in our url.
     static void username_anomaly_checker(ParsedURL& result); //this function will check if the username mimics any domain name and set the value of domain_as_username bool.
+    static void host_extractor(std::string_view& raw_url,ParsedURL& result); //this function will extract the hostname if present.
 };
 
 #endif
