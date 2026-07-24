@@ -3,17 +3,19 @@ This is addon of mitmproxy.
 Usage: mitmweb -s entry_point.py --listen-host 0.0.0.0 --listen-port 8080 .(optional web port)
 run this^ before turning on proxy.idk why doing opposite causing repeated client disconnection.
 """
-from mitmproxy import http # type: ignore cause mitmproxy is not installed in my mac.it's in vm.
+from mitmproxy import http # type: ignore cause mitmproxy is not installed in my machine.it's in vm.
 from datetime import datetime
+from dotenv import load_dotenv #type:ignore it will be installed in vm.
 import os
 import ctypes #to call cpp functions.
-import config #to get values from config.py
 
-#fetch values from config.py
-thread_count=config.MAX_THREAD_COUNT
-queue_length=config.MAX_QUEUE_LENGTH
-max_size=config.MAX_CACHE_SIZE
-ttl=config.TIME_TO_LIVE
+#first we will load the config.env file
+load_dotenv()=os.path.join(os.path.dirname(os.path.abspath(__file__)),"traffic_shield_config.env")
+#now fetch values from config.env.
+thread_count=os.environ.get("MAX_THREAD_COUNT")
+queue_length=os.environ.get("MAX_QUEUE_LENGTH")
+cache_max_size=os.environ.get("MAX_CACHE_SIZE")
+cache_ttl=os.environ.get("CACHE_TIME_TO_LIVE")
 
 #load all shared object file. 
 #i don't want to hardcode the path.I will use relative path.
@@ -55,7 +57,7 @@ class Urlsubmit:
             print("Gateway initiation failed.")
 
         #We will initialize our cache here.
-        result_of_cache_init=cache.cache_init(max_size,ttl)
+        result_of_cache_init=cache.cache_init(cache_max_size,cache_ttl)
         if result_of_cache_init==0:
             print("Cache initiation successful.")
         else:
