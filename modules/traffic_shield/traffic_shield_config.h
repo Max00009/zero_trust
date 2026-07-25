@@ -57,6 +57,52 @@ I don't know right now if I should also do something for other way around like i
 #pragma once
 #include <cstdio> //for std::fopen()
 #include <string>
+#include <dlfcn.h> //for dladdr() which finds path of current .so file
+#include <filesystem> //for filepath manipulation 
+
+//first we need to find the config.env file respective to the file where we calling load_config()
+//because remember config.env will be relative to where the program runs from,not relative to where config.h lives
+//different cpp files might call load_config() function and for different files the relative path will be different.so we have to take a dynamic approach.
+//we will create a finction that will dynamically build the relative path between calling .so file(cause our calling cpp file will eventually be compiled into .so file) and the traffic_shield_config.env file
+inline std::string find_config_env(){
+    Dl_info info; //dl_info is a datatype.It is used to store symbolic information about a memory address when calling the dladdr() function.
+    if(!dladdr((void*)find_config_env,&info) || !info.dli_fname) return ""; //this line calls the dladdr() function to populate info struct and also runs a success check.
+    //breakdown of this part `dladdr((void*)find_config_env,&info)`
+    //dladdr takes any address in memory and tells us which shared library file that address belongs to and where that library is on disk.
+    //so we have to give it any address that belongs to our target so file.one way to do that is give address of any function defined in that so file.
+    //we can give address of any function but here we are giving address of find_config_env.
+    //NOTE there is no () after find_config_env cause in C++, a function name without () is not a function call — it's the address of that function in memory.and that's what we need.
+    //dladdr expects const void* — a generic pointer type. But find_config_env is a function pointer, which has its own specific type.that's why we need to typecast it to (void*).
+    //and we will also pass the info variable(which is dl_info datatype) by reference where dlladdr will store the output information and later we can extract what we need from there.
+
+    std::filesystem::path so_file_path{info.dli_fname}; //path to current so file.we are just initializing so_file_path variable.
+    std::filesystem::path so_file_dir=so_file_path.parent_path(); //directory of current so file
+
+    //now we have to search upwards directory for 'traffic_chield_config.env' file.we know for sure that our config.env file will be at the root directory of respective module.
+    //so we will search each directory and if not found move to parent directory and search there.but we have to makesure we don't beyond up the root directory of our current module.
+    std::filesystem::path curr_dir=so_file_dir;
+    while (true){
+        //check for traffic_shield_config.env in current directory
+        std::filesystem::path candidate = curr_dir / "traffic_shield_config.env";
+        if (std::filesystem::exists(candidate)){
+            //that means we found it and we just need to return the filepath string
+            return candidate.string();
+        }
+        //if not found first check if we have reached the root of our MODULE cause we don't want to move past that
+        if (curr_dir.filename()=="traffic_shield") return ""; //filename() will return the last component of path.
+
+        //if somehow traffic_shield check fails somehow,we need another check to prevent infinite looping.
+        std::filesystem::path parent=curr_dir.parent_path();
+        if (parent==curr_dir) return ""; //cause caling parent_path() on '/' will return '/' itself.
+
+        //now move one directory up
+        curr_dir=parent;
+    }
+
+
+}
+
+
 
 //if you are wondering why I used inline I have already explained it in url_analyzer/utils/utils.h file
 inline void load_config(const std::string& filepath="config.env"){
