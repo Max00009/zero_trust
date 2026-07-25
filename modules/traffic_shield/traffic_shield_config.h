@@ -83,10 +83,10 @@ inline std::string find_config_env(){
     std::filesystem::path curr_dir=so_file_dir;
     while (true){
         //check for traffic_shield_config.env in current directory
-        std::filesystem::path candidate = curr_dir / "traffic_shield_config.env";
-        if (std::filesystem::exists(candidate)){
+        std::filesystem::path target_file_path = curr_dir / "traffic_shield_config.env";
+        if (std::filesystem::exists(target_file_path)){
             //that means we found it and we just need to return the filepath string
-            return candidate.string();
+            return target_file_path.string();
         }
         //if not found first check if we have reached the root of our MODULE cause we don't want to move past that
         if (curr_dir.filename()=="traffic_shield") return ""; //filename() will return the last component of path.
