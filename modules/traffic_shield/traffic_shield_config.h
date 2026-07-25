@@ -55,10 +55,11 @@ I don't know right now if I should also do something for other way around like i
 
 
 #pragma once
-#include <cstdio> //for std::fopen()
+#include <fstream> //for std::ifstream()
 #include <string>
 #include <dlfcn.h> //for dladdr() which finds path of current .so file
-#include <filesystem> //for filepath manipulation 
+#include <filesystem> //for filepath manipulation
+#include <iostream>
 
 //first we need to find the config.env file respective to the file where we calling load_config()
 //because remember config.env will be relative to where the program runs from,not relative to where config.h lives
@@ -98,13 +99,22 @@ inline std::string find_config_env(){
         //now move one directory up
         curr_dir=parent;
     }
-
-
 }
 
 
 
 //if you are wondering why I used inline I have already explained it in url_analyzer/utils/utils.h file
-inline void load_config(const std::string& filepath="config.env"){
+inline void load_config(){
+    std::string filepath=find_config_env();
+    if (filepath.empty()){ //if find_config_env() returns empty string
+        std::cerr<< "[config] ERROR: could not find traffic_shield_config.env.Make sure it exists in the traffic_shield root directory.\n";
+        return;
+    }
 
+    //now let's open that file
+    std::ifstream file(filepath); //in one line - creates an object of std::ifstream class.calls constructor with filepath argument.constructor automatically opens the file.
+    if(!file.is_open()){
+        std::cerr<<"[config] ERROR: failed to open"<<filepath<<"file"<<std::endl;
+        return;
+    }
 }
