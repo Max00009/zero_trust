@@ -117,4 +117,53 @@ inline void load_config(){
         std::cerr<<"[config] ERROR: failed to open"<<filepath<<"file"<<std::endl;
         return;
     }
+
+    std::string line;
+    while (std::getline(file,line)){
+        //we need to skip empty lines and comments
+        if (line.empty() || line[0]=='#') continue;
+        //we also have to skip inline comments i.e. where comment starts at middle of a line.e.g CACHE_TIME_TO_LIVE=604800 #in seconds
+        auto comment=line.find('#');
+        if (comment!=std::string::npos){
+            line=line.substr(0,comment);
+        }
+        //after filtering out all comments now we have to find '=' inside those remaining line
+        auto eq=line.find('=');
+        if (eq==std::string::npos) continue; //if there is a line which is not comment but also doesn't contain '=' then just skip that
+
+        //now extract the key,value pair
+        std::string key=line.substr(0,eq);
+        std::string value=line.substr(eq+1); //no length indicates take everything remaining
+
+        //now we need to trim whitespaces from key and value.for that we will create a lambda function
+        auto trim=[](std::string& s){
+            size_t start=s.find_first_not_of(" \t\r\n"); //we are looking for first char that is not space,tabs,carriage return or new line.look carefully ' '(space) is present at the beginning.
+            size_t end=s.find_last_not_of(" \t\r\n"); //we are looking for last char that is not space,tabs,carriage return or new line.look carefully ' '(space) is present at the beginning.
+            s=(start==std::string::npos)?"":s.substr(start,end-start+1); //if we don't find the start non-whitespace character then we just take an empty string as result.in next step we will check if it's empty
+        };
+        trim(key);
+        trim(value);
+
+        //check if key or value is empty string
+        if (key.empty()) continue; //if key is empty then it's always invalid.
+        //incase of empty value that might be meaningful i.e. the settings exist but has no value. however in my config file every key needs to have a value.
+        //so I will also check if value is empty and if it is then give an error.
+        //we can later fallback to default value in case value is empty but I don't like the idea of hardcoding default values in case of each key.
+        if (value.empty()){
+            std::cerr<<"[config] ERROR: No value found for "<<key<<" parameter.Set the value in traffic_shield_config.env file"<<std::endl;
+            continue; //we continue with next key
+        }
+
+        //now that our key,value pair is reday we have to load it in process environment
+        //setenv() strictly expects const char* as first two arguments:int setenv(const char *name, const char *value, int overwrite).that's why we have to use c_str() member function.
+        if((setenv(key.c_str(),value.c_str(),0))!=0){//0 means don't overwrite if already loaded
+            std::cerr<<"[config] ERROR: Failed to load "<<key<<"="<<value<<" in process environment"<<std::endl;
+            continue;
+        }
+    }
 }
+
+//here we will define helper fucntions to read a value from process environment table.
+//NOTE:in load_config we continued with next line when the value was empty or it failed to load the key=pair value in process environment table.
+//      that's fine but in these helper functions we have to enforce the "must have a value" rule.otherwise the main function where the value is being fetched will crash.
+//      so in these functions if we don't find a key or if the key has no value we will exit loudly.
