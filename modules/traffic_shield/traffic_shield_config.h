@@ -60,6 +60,9 @@ I don't know right now if I should also do something for other way around like i
 #include <dlfcn.h> //for dladdr() which finds path of current .so file
 #include <filesystem> //for filepath manipulation
 #include <iostream>
+#include <cstdlib> //for setenv() and getenv()
+#include <cctype> //for std::isdigit
+#include "analyzer/utils/utils.h"
 
 //first we need to find the config.env file respective to the file where we calling load_config()
 //because remember config.env will be relative to where the program runs from,not relative to where config.h lives
@@ -100,7 +103,6 @@ inline std::string find_config_env(){
         curr_dir=parent;
     }
 }
-
 
 
 //if you are wondering why I used inline I have already explained it in url_analyzer/utils/utils.h file
@@ -167,3 +169,70 @@ inline void load_config(){
 //NOTE:in load_config we continued with next line when the value was empty or it failed to load the key=pair value in process environment table.
 //      that's fine but in these helper functions we have to enforce the "must have a value" rule.otherwise the main function where the value is being fetched will crash.
 //      so in these functions if we don't find a key or if the key has no value we will exit loudly.
+
+
+//to check if all digits
+//we are going to use atoi().but there is a problem.atoi() returns 0 silently incase of non-numeric value like "abc".
+//atoi will also return 0 if the value is literally 0.
+//so we have to check if all the digits are numerical.if one non-numerical found we will just throw error and exit.
+inline bool is_all_digits(const char* s){
+    bool has_negative_at_start=false;
+    for (size_t i=0;s[i]!='\0';i++){
+        if (i==0 && s[i]=='-'){
+            has_negative_at_start=true;
+            continue; //otherwise it will return false for '-' so negative values(maybe in future) will be discarded.
+        }
+        if (!std::isdigit(s[i])){
+            return false;
+        }
+    }
+    if (has_negative_at_start && s[1]=='\0') return false; //this will discard the only '-' case where no other digits after '-'
+    return true;
+}
+
+//to get size_t config values
+inline size_t get_config_size(const char* key){
+    const char* value=std::getenv(key);
+    if (!value || value[0]=='\0'){
+        std::cerr<<"[config] ERROR: required config value '"<<key<<"' is missing or empty."<<std::endl;
+        std::exit(1);
+    }
+    if (!is_all_digits(value)){
+        std::cerr<<"[config] ERROR: '"<<key<<"' has a non-numerical value."<<std::endl;
+        std::exit(1);
+    }
+    //this function returns size_t.if atoi returns a negative value typecasting that to size_t will turn it into large positive value.
+    //so we have to discard negative value in this case.
+    if (value[0]=='-'){
+        std::cerr<<"[config] ERROR: '"<<key<<"' cannot have a negative value."<<std::endl;
+        std::exit(1);
+    }
+    return static_cast<size_t>(std::atoi(value)); //atoi to change the string into int.and then we are typecasting to size_t.
+}
+
+//to get int config values
+inline int get_config_int(const char* key){
+    const char* value=std::getenv(key);
+    if (!value || value[0]=='\0'){
+        std::cerr<<"[config] ERROR: required config value '"<<key<<"' is missing or empty."<<std::endl;
+        std::exit(1);
+    }
+    if (!is_all_digits(value)){
+        std::cerr<<"[config] ERROR: '"<<key<<"' has a non-numerical value."<<std::endl;
+        std::exit(1);
+    }
+    return std::atoi(value);
+}
+
+//to get bool values
+inline bool get_config_bool(const char* key){
+    const char* value=std::getenv(key);
+    if (!value || value[0]=='\0'){
+        std::cerr<<"[config] ERROR: required config value '"<<key<<"' is missing or empty."<<std::endl;
+        std::exit(1);
+    }
+    std::string bool_value{value};
+    return bool_value=="1" || is_same(bool_value,"true")||is_same(bool_value,"yes"); //to handle case insensitive case
+}
+
+//if later we need some other datatype value from config file we have to create another function for that.
