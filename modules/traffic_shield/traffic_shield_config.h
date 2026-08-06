@@ -62,7 +62,28 @@ I don't know right now if I should also do something for other way around like i
 #include <iostream>
 #include <cstdlib> //for setenv() and getenv()
 #include <cctype> //for std::isdigit
-#include "analyzer/utils/utils.h"
+#include "analyzer/utils/utils.h" //I encountered a problem with this include.let me explain it below.
+//the above include filepath is relative to the calling code.for example if example/foo.cpp is calling the get_config_bool() which requires is_same() function from utils.h
+//the compiler will look into example/analyzer/utils/utils.h which doesn't exist.
+//the simplest solution is to add the -I flag in MAkefile of foo.cpp with absolute path of traffic_shield/ where compiler can find our .h file
+//-I flag tells the compiler "When resolving #include paths, also look in this directory"
+//So now when compiler sees #include "analyzer/utils/utils.h", it searches:
+//1. current file's directory     → example/analyzer/utils/utils.h  NOT FOUND
+//2. traffic_shield/ (from -I)    → traffic_shield/analyzer/utils/utils.h  FOUND
+
+/*
+after solving that problem another doubt came to my mind.could we just use the same -I flag to point traffic_shield/ directory where traffic_shield_config.env lives instead of creating the hectic find_config_env() function?
+the answer is no cause these two are different problems.
+.env file is needed at runtime.compiler has nothing to do with it cause the compilation is already done.
+.h file is needed at compile time when compiler is building our code and it needs to find header files.so -I flag tells the compiler where to look for them.
+when our program is running it has no idea what MAX_THREAD_COUNT should be — that value was never in our source code. It's a configuration decision that can change without recompiling.
+it needs to read the actual value from somewhere. That somewhere is the .env file.
+compiler doesn't read the env file.it justs reads our source code,finds header files and translates our code into machine code.
+env file is read by our running program.missing env file will cause runtime error.any change to env file doesn't require recompilation.
+*/
+
+
+
 
 //first we need to find the config.env file respective to the file where we calling load_config()
 //because remember config.env will be relative to where the program runs from,not relative to where config.h lives
