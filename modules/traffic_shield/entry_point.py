@@ -7,15 +7,38 @@ from mitmproxy import http # type: ignore cause mitmproxy is not installed in my
 from datetime import datetime
 from dotenv import load_dotenv #type:ignore it will be installed in vm.
 import os
+import sys
 import ctypes #to call cpp functions.
 
 #first we will load the config.env file
 load_dotenv()=os.path.join(os.path.dirname(os.path.abspath(__file__)),"traffic_shield_config.env")
+
+'''
+later we might need to load config values in this pyhton file for use.
+so I am making a function that will load config values from traffic_shield_config.env and it will make sure there is no empty value or missing key.
+in cpp files I have made custom functions that handle empty value and missing key case.but in python os.environ.get() doesn't throw any error in case of empty value or missing key.
+so I have to enforce must key,value in this function.
+'''
+def get_config(key,cast=str): #default cast=string
+    val=os.environ.get(key)
+    if val is None or val.strip()=="":
+        print(f"[config] ERROR: required config value '{key}' is missing or empty.Check traffic_shield_config.env file.")
+        sys.exit(1)  # crash loudly — same as std::exit(1) in C++
+    try:
+        return cast(val)
+    except(ValueError): #e.g. Case: Right type (string), but bad content (e.g., "abc" for int)
+        print(f"[config] ERROR: config value '{key}' has invalid format: '{val}'")
+        sys.exit(1)
+    except(TypeError):#e.g. # Case: Wrong type entirely (e.g., passing a list to int, or calling .lower() on an int)
+        print(f"[config] ERROR: config value '{key}' has incompatible type for conversion: '{val}'")
+        sys.exit(1)
+        
 #now fetch values from config.env.
-thread_count=os.environ.get("MAX_THREAD_COUNT")
-queue_length=os.environ.get("MAX_QUEUE_LENGTH")
-cache_max_size=os.environ.get("MAX_CACHE_SIZE")
-cache_ttl=os.environ.get("CACHE_TIME_TO_LIVE")
+thread_count=get_config("MAX_THREAD_COUNT",int)
+# queue_length=os.environ.get("MAX_QUEUE_LENGTH")
+# cache_max_size=os.environ.get("MAX_CACHE_SIZE")
+# cache_ttl=os.environ.get("CACHE_TIME_TO_LIVE")
+gateway_open=get_config("GATEWAY_OPEN",lambda x:x.lower()=="true") #here we are sending this function as cast parameter and it will be executed while returning cast(val).we are doing this to handle case-sensitivity(True=TRUE=true)
 
 #load all shared object file. 
 #i don't want to hardcode the path.I will use relative path.
@@ -50,14 +73,14 @@ class Urlsubmit:
     def load(self,loader):#not using loader right now.may be later useful.
         #First we initialize the gateway.
         print(f"Initializing gateway with {thread_count} threads...")
-        result_of_gateway_init=gateway.gateway_init(thread_count,queue_length)
+        result_of_gateway_init=gateway.gateway_init(thread_count,queue_length) #CHANGE
         if result_of_gateway_init==0:
             print("Gateway initiation successful.")
         else:
             print("Gateway initiation failed.")
 
         #We will initialize our cache here.
-        result_of_cache_init=cache.cache_init(cache_max_size,cache_ttl)
+        result_of_cache_init=cache.cache_init(cache_max_size,cache_ttl) #CHANGE
         if result_of_cache_init==0:
             print("Cache initiation successful.")
         else:
