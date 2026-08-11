@@ -73,7 +73,7 @@ class Urlsubmit:
     def load(self,loader):#not using loader right now.may be later useful.
         #First we initialize the gateway.
         print(f"Initializing gateway with {thread_count} threads...")
-        result_of_gateway_init=gateway.gateway_init(thread_count,queue_length) #CHANGE
+        result_of_gateway_init=gateway.gateway_init()
         if result_of_gateway_init==0:
             print("Gateway initiation successful.")
         else:
