@@ -11,6 +11,28 @@
 #include <fstream> //just for testing.
 #include <unordered_map>
 #include <atomic> //for atomic type.
+#include "../traffic_shield_config.h"
+
+//here I will load the config values directly.no need to pass argument from python file.
+//I just learnt I cannot call a function at top of our cpp code.
+/*
+cpp code has two distinct zones- FILE SCOPE zone(only declarations and initializations allowed here.function call not allowed) and FUNCTION SCOPE zone(any statement allowed here)
+WHY??->C++ needs to know the structure of our program before it starts running. File scope is where the compiler builds that structure — what types exist, what functions exist, what global variables exist.
+
+But we can use a trick to call a function at top in disguise of variable initializatoin(which is allowed)
+we will use a lambda fucntion that will initialize config_loaded variable and to do so it will calll our function.
+variable initialization will be completed by the time our .so file is loaded in parent python code,so that means our load_config() function will be called during 
+that and as a result all our config values will be loaded in process environment already.
+*/
+
+static const bool config_loaded=[](){
+    load_config(); //we can call our function here.
+    return true;
+}(); //last () is to call our lambda function immediately
+
+//config values
+static const size_t thread_count=get_config_size("MAX_THREAD_COUNT");
+static const size_t queue_length=get_config_size("MAX_QUEUE_LENGTH");
 
 struct Task{
     size_t id; //every url will have it's own id so we can track
@@ -24,11 +46,9 @@ static std::queue<Task> task_queue;   //main queue where from where our worker t
 static std::condition_variable task_cv; //conditional variable for tasks.
 static std::condition_variable result_cv; //conditional variable for result.
 static std::vector<std::thread> worker_threads; //vector that contains worker threads.
-
-size_t thread_count;
-size_t queue_length;
+static bool gateway_open=true;
 std::atomic<size_t> url_id=1; //atomic to make it thread-safe.without atomic,if two thread called it at same time they both might get 1 as starting value.
-bool gateway_open;
+
 
 //we will create a unordered_map here to store <id,decision>.
 static std::unordered_map<size_t,bool> result_hashtable;
@@ -110,9 +130,7 @@ void worker_function(){
     }
 }
 
-int gateway_init(size_t number_of_threads,size_t length_of_queue){
-    thread_count=number_of_threads;
-    queue_length=length_of_queue;
+int gateway_init(){
     gateway_open=true;
     for (size_t i=0;i<thread_count;i++){
         worker_threads.emplace_back(worker_function);//we are using emplace_back to create a thread directly and then push_back to worker_threads vector.
