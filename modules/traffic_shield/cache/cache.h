@@ -7,8 +7,7 @@
 extern "C"{
 #endif
 //our functions declarations will be here.
-int cache_init(size_t max_size,int64_t ttl);   //returns 0 if successful.
-
+int cache_init();   //returns 0 if successful.
 
 #ifdef __cplusplus
 }
