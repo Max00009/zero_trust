@@ -60,6 +60,7 @@ I don't know right now if I should also do something for other way around like i
 #include <dlfcn.h> //for dladdr() which finds path of current .so file
 #include <filesystem> //for filepath manipulation
 #include <iostream>
+#include <cstdint> //for int64_t
 #include <cstdlib> //for setenv() and getenv()
 #include <cctype> //for std::isdigit
 #include "analyzer/utils/utils.h" //I encountered a problem with this include.let me explain it below.
@@ -254,6 +255,20 @@ inline bool get_config_bool(const char* key){
     }
     std::string bool_value{value};
     return bool_value=="1" || is_same(bool_value,"true")||is_same(bool_value,"yes"); //to handle case insensitive case
+}
+
+//to get int64_t values(needed in cache_init function)
+inline int64_t get_config_int64_t(const char* key){
+    const char* value=std::getenv(key);
+    if (!value || value[0]=='\0'){
+        std::cerr<<"[config] ERROR: required config value '"<<key<<"' is missing or empty."<<std::endl;
+        std::exit(1);
+    }
+    if (!is_all_digits(value)){
+        std::cerr<<"[config] ERROR: '"<<key<<"' has a non-numerical value."<<std::endl;
+        std::exit(1);
+    }
+    return (std::atoll(value)); //atoll to convert to long long
 }
 
 //if later we need some other datatype value from config file we have to create another function for that.
