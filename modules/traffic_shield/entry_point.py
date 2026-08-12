@@ -80,7 +80,7 @@ class Urlsubmit:
             print("Gateway initiation failed.")
 
         #We will initialize our cache here.
-        result_of_cache_init=cache.cache_init(cache_max_size,cache_ttl) #CHANGE
+        result_of_cache_init=cache.cache_init()
         if result_of_cache_init==0:
             print("Cache initiation successful.")
         else:
