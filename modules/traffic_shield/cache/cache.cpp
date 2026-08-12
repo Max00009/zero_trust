@@ -6,10 +6,17 @@
 #include <mutex>
 #include <cstdint>  //for int64_t
 #include <vector>
+#include "../traffic_shield_config.h"
+
+//load the environments variabels via our lambda function
+static const bool config_loaded = [](){
+    load_config();
+    return true;
+}();
 struct CacheUrl{
     std::string url;
     int threat_score;
-    int64_t last_time_scanned;
+    int64_t last_time_scanned; //the reason I am using int64_t(long long) for all time related parameter is because get_time will return long long and we have to do arithmatic between these.
     //these two are pointers for double-linked-list.these are required for LRU(least recently used).
     CacheUrl *perv;
     CacheUrl *next;
@@ -21,17 +28,23 @@ static std::mutex cache_mutex;
 static std::unordered_map<std::string,CacheUrl*> hashtable; //<URL,pointer_to_cache_of_that_url>
 static CacheUrl *prev=nullptr;
 static CacheUrl *next=nullptr;
-static int max_cache_size=0;
-static int64_t time_to_live=0;
+//initialize our config values
+static const size_t MAX_CACHE_SIZE=get_config_size("MAX_CACHE_SIZE");
+static const int64_t CACHE_TIME_TO_LIVE=get_config_int64_t("CACHE_TIME_TO_LIVE");
 
 int64_t get_time(){
-    return std::time(nullptr);
+    return std::time(nullptr); //this returns time_t which on modern 64-bit systems is long long.
 }
-int cache_init(int max_size,int64_t ttl){   //initialize an empty cache in RAM.
-    //store configuration values.
-    max_cache_size=max_size;
-    time_to_live=ttl;
+
+//LATER I HAVE TO WORK ON THIS cache_init() FUNCTION
+int cache_init(){   //initialize an empty cache in RAM.
+    //discard negative config value
+    if (CACHE_TIME_TO_LIVE<=0){
+    std::cerr<< "[config] ERROR: TIME_TO_LIVE must be positive."<<std::endl;
+    std::exit(1);
+    }
     //for safety we need to reset data structures.
+
     hashtable.clear();
     prev=nullptr;
     next=nullptr;
