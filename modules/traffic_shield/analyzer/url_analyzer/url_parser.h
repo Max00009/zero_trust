@@ -32,7 +32,7 @@ struct ParsedURL{
     bool is_ip_address=false;
     bool is_ipv4=false; //all digits and dots
     bool is_ipv6=false; //starts with '['
-    int subdomain_depth=0; //this might come from config value.
+    int subdomain_depth=0; //this might come from config value.or maybe directly at cpp file during parsing.
     int port=-1;    //-1 means port not specified.
 
     //path
@@ -60,7 +60,9 @@ struct ParsedURL{
     bool blank_password=false; //i am just keeping a note of it.don't know yet if later i have to consider this.
     bool domain_as_username=false; //this classic attack: http://google.com@evil.com/login.The attacker is using @ to make us think it's going to google.com.
     bool very_long_hostname=false; //we can take a max length from config file and anything lengthier than that will be flagged.
-
+    bool malformed_host=false; //for cases like multiple colons but no '[]' or multiple ':' left after ipv6 address
+    bool out_of_ranged_port=false; //if port <0 or >65535
+    
     //status
     bool parse_successfull=true;   //false if url is fundamentally malformed.
 
@@ -75,11 +77,14 @@ public:
 
 
 private:
-    //helper functions will live here
-
     //NOTE:explaination of how we will modify the string even tho we are taking std::string_view.
     //we can't modify the characters inside our string cause std::string_view is read only.
     //HOwever we can change where it points and how long it is.so we can just move the boundaries of the view, not touching the original string.
+
+    //helper functions will live here
+    //passing by value is more efficient than passing by reference in case of std::string_view.then why are we passing by reference in most of these fucntions?
+    //cause in those fucntions we are modifying by remove_prefix() to advance the cursor.so we need to pass by reference.
+    //if we don't need to modify then we can just pass by value(e.g. is_all_digits() function.)
     static void trim_url(std::string_view& raw_url); //this function will remove all white-spaces from our url.We are passing by reference cause we don't want own copy.We want to trim the original copy.
     static void set_scheme(std::string_view& raw_url,ParsedURL& result); //this function will detect the first occurence of ':' and extract the scheme name.
     static void scheme_checker(ParsedURL& result); //this function will check if the scheme is safe and set 'is_scheme_safe' bool accordingly.
@@ -87,6 +92,7 @@ private:
     static void credential_extractor(std::string_view& raw_url,ParsedURL& result); //thsi function will check if any credentials present in our url.
     static void username_anomaly_checker(ParsedURL& result); //this function will check if the username mimics any domain name and set the value of domain_as_username bool.
     static void host_extractor(std::string_view& raw_url,ParsedURL& result); //this function will extract the hostname if present.
+    static bool is_all_digits(std::string_view remaining_part); //helper function of host_extractor fucntion needed for port validation
 };
 
 #endif
