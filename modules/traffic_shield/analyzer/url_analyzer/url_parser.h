@@ -29,6 +29,7 @@ struct ParsedURL{
     std::string_view domain_label;  //e.g.  google"   (name without TLD)
     std::string_view tld;   //e.g.  "com"  or  "co.uk"
 
+    bool is_domain_name=false; //example.com
     bool is_ip_address=false;
     bool is_ipv4=false; //all digits and dots
     bool is_ipv6=false; //starts with '['
@@ -62,7 +63,11 @@ struct ParsedURL{
     bool very_long_hostname=false; //we can take a max length from config file and anything lengthier than that will be flagged.
     bool malformed_host=false; //for cases like multiple colons but no '[]' or multiple ':' left after ipv6 address
     bool out_of_ranged_port=false; //if port <0 or >65535
-    
+    bool malformed_port=false; //when port contains non-numerical value
+    bool no_dots_in_host=false; //https://localhost/path or http://13143/path
+    bool no_dots_bare_ip_in_host=false; //http://13143/path (more suspicious than https://localhost/path)
+
+
     //status
     bool parse_successfull=true;   //false if url is fundamentally malformed.
 
@@ -92,7 +97,10 @@ private:
     static void credential_extractor(std::string_view& raw_url,ParsedURL& result); //thsi function will check if any credentials present in our url.
     static void username_anomaly_checker(ParsedURL& result); //this function will check if the username mimics any domain name and set the value of domain_as_username bool.
     static void host_extractor(std::string_view& raw_url,ParsedURL& result); //this function will extract the hostname if present.
-    static bool is_all_digits(std::string_view remaining_part); //helper function of host_extractor fucntion needed for port validation
+    static void detect_address_type(std::string_view full_host_without_port,ParsedURL& result); //helper function of host_extractor function to check if ip is numeric like 10.48.32.95 or domain like example.com
+    static void port_extractor(std::string_view remaining_part,ParsedURL& result); //this function will parse port
+    static bool is_all_digits(std::string_view remaining_part); //helper function of port_extractor fucntion needed for port validation
+
 };
 
 #endif

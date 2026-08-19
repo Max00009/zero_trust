@@ -43,6 +43,8 @@ ParsedURL URLParser::parse(std::string_view raw_url){
 
     //NEXT TASK:extract host name
 
+    //NEXT TASK:domain brekdown if result.is_domain && !result.full_host_without_port.empty()
+
     return result;
 }
 
@@ -208,3 +210,152 @@ void URLParser::username_anomaly_checker(ParsedURL& result){
         result.domain_as_username=true;
     }
 }
+
+void URLParser::host_extractor(std::string_view& raw_url,ParsedURL& result){
+    //if there is no host then we return early
+    if (!result.has_host) return;
+    //now we have to set the host end boundary.hostname will end with any of these [/,?,#]
+    //example:
+    //https://example.com/path
+    //https://example.com?query=1
+    //https://google.com#section
+    //so to set boundary we have to find first occuerence of any of these [/,?,#].if none found then we take the whole remaining part to search for.
+    size_t pos=raw_url.find_first_of("/?#");
+    size_t boundary_of_hostname=(pos==std::string_view::npos)?raw_url.size():pos;
+
+    //first let's extract the full host with port(if present)
+    result.full_host=raw_url.substr(0,boundary_of_hostname);
+
+    //we will find first and last occuerence of ':'.if both returns same index that means we have only one ':' in our full host name.that means it can't be ipv6.
+    //in that case we will treat everything after that as port.
+    //if no ':' found then it can't be ipv6 and also no port specified.
+    size_t first_colon=result.full_host.find(":");
+    size_t last_colon=result.full_host.rfind(":");
+
+    if (first_colon!=std::string_view::npos){ //that means colon present
+        //now that we know colon is present let's see if it's multiple
+        if (first_colon!=last_colon){ //that means multiple
+            //now let's confirm if it's ipv6 by checking '[' and ']'
+            if ((result.full_host.starts_with('[')) && result.full_host.rfind(']')!=std::string_view::npos){ //confirmed ipv6
+                result.is_ip_address=true;
+                result.is_ipv6=true;
+                size_t pos_of_close_square_brac=result.full_host.rfind(']');
+                result.full_host_without_port=result.full_host.substr(1,pos_of_close_square_brac-1); //leaving []
+
+                //now let's see if port is present.first we will check if there is any remaining part after [] by comparing size
+                if ((result.full_host.size()>(pos_of_close_square_brac+1))){
+                    if ((pos_of_close_square_brac+1)==last_colon){ //we will check if the last colon is present after ']'.that way we can handle situation like [ipv6]:fake:port
+                        std::string_view remaining_part=result.full_host.substr(last_colon+1);
+                        port_extractor(remaining_part,result); //send the remaining part to port_extractor function
+                    }else{
+                        //that means there are more than one ':' left after ']' or there is no ':' after ']'. what should I do idk yet.maybe just mark it as malformed.
+                        result.malformed_host=true;
+                    }
+                }
+            }else{ //multiple colons but not ipv6->has to be malformed
+                result.malformed_host=true;
+            }
+        }else{ //single colon. ipv4 with port or domain name with port is possible
+            //take everything after ':' as port
+            result.full_host_without_port=result.full_host.substr(0,first_colon);
+            std::string_view remaining_part=result.full_host.substr(first_colon+1);
+            port_extractor(remaining_part,result);
+            //TODO:now check if it is ip address like 10.48.0.34 or address like example.com
+            //TODO:we will create a function named detect_address_type(std::string_view result.full_host_without_port) to determine that
+            detect_address_type(result.full_host_without_port,result);
+        }
+    }else{ //no colon present.portless ipv4 or domain name is possible
+        result.full_host_without_port=result.full_host;
+        //TODO:call detect_address_type(std::string_view result.full_host_without_port)
+        detect_address_type(result.full_host_without_port,result);
+
+    }
+
+    
+    //now move past [/,?,#]
+    raw_url.remove_prefix(boundary_of_hostname);
+    //notice we are not adding +1 to go past the delimeter.cause in next step we will need to see this delimeter to determine if next part is a file path(/) or parameter(?) or fragment(#)
+    //when pos==npos-->boundary_of_hostname==raw_url.size() so we do raw_url.remove_prefix(raw_url.size());
+    //when pos!=npos-->boundary_of_hostname==pos so we do raw_url.remove_prefix(pos) this keeps our delimeter which we can use.
+}
+
+void URLParser::detect_address_type(std::string_view full_host_without_port,ParsedURL& result){
+    //4 '.' +each within range 0-255 -> numeric ip
+    //else domain_name
+    //NOTE:how to handle the case where multiple dot's in sequence like example...com?after breaking it down there will be an empty octet.and is_all_digits() already returns false for empty element
+    //so ipv4 will never be set in that case.however it will be set as is_domain_name.but later in breakdown_domain() function we will filter this thing and set malformed_host bool to true.
+    if (full_host_without_port.find('.')!=std::string_view::npos){
+        if (std::count(full_host_without_port.begin(),full_host_without_port.end(),'.')==3){ //maybe ipv4 also maybe some.example.com
+            //we will brekdown split by '.' and collect in an array
+            std::string_view octet[4]; //an array with 4 octects
+            std::string_view full_host_without_port_copy=full_host_without_port; //we need a copy to iterate through the '.' and advance our pointer
+            for (size_t i=0;i<4;i++){
+                size_t pos=full_host_without_port_copy.find('.');
+                if (i==3){
+                    octet[i]=full_host_without_port_copy; //cause at that moment only last part will remain
+                    break; //to avoid advancing
+                }
+                octet[i]=full_host_without_port_copy.substr(0,pos);
+                full_host_without_port_copy.remove_prefix(pos+1);
+            }
+            //then for each part of array check if all_digits and within range.
+            bool all_valid=true;
+            for (auto c:octet){
+                if (!is_all_digits(c)) {all_valid=false;break;}
+                try{ //cause stoi can throw error in two cases that I have explained in port_extractor function
+                    int val=std::stoi(std::string(c));
+                    if (val<0 || val>255) {all_valid=false;break;}
+                }catch(...){ all_valid=false;break;}
+            }
+            //if all pass that means confirm ipv4.otherwise we go for domain name
+            if (all_valid){
+                result.is_ip_address=true;
+                result.is_ipv4=true;
+            }else{
+                result.is_domain_name=true;
+            }
+        }else{ //not ipv4 for sure
+            result.is_domain_name=true;
+        }
+    }else{
+        result.no_dots_in_host=true;
+        if (is_all_digits(full_host_without_port)) result.no_dots_bare_ip_in_host=true;
+    }
+}
+
+
+
+void URLParser::port_extractor(std::string_view remaining_part,ParsedURL& result){
+    if (is_all_digits(remaining_part)){
+        //std::stoi() throws error in two cases std::invalid_argument (e.g. std::stoi("12x3").it's not supposed to happen in our case cause we already calll is_all_digits())
+        //and std::out_of_range (e.g std::stoi("99999999999") which is bigger than what int can hold.it might happen in our case)
+        //we will catch both cases just for safety
+        try {
+            result.port=std::stoi(std::string(remaining_part));
+            //after extracting the port we will do port range validation here.port analyzing will be at the analyzer but we need to accept only validated ports beforehand for safety.
+            //during port analyzing we will just detect unusual ports but right now we will discard ports that are beyond range.
+            if (result.port<1 || result.port>65535){
+                result.out_of_ranged_port=true;
+            }
+        }catch(const std::invalid_argument&){ //we catch by reference
+            result.malformed_port=true;
+        }catch(const std::out_of_range&){
+            result.out_of_ranged_port=true;
+        }
+    }
+}
+
+bool URLParser::is_all_digits(std::string_view remaining_part){
+    if (remaining_part.empty()) return false;
+    return std::all_of(remaining_part.begin(),remaining_part.end(),[](unsigned char ch){
+        return ch>='0' && ch<='9'; //strictly checks if each char is only digits in range 0-9
+    });
+}
+
+
+//To do:
+/*
+is this..is.example.com valid if not then we have to implement another filter in domain_breakdown() function.
+add url and hostname length check
+write domain_breakdown() function
+*/
