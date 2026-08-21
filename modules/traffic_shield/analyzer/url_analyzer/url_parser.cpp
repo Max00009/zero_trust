@@ -10,6 +10,18 @@
 #include <map>
 #include <cctype> //for std::isspace
 #include <unordered_set>
+#include "../../traffic_shield_config.h"
+
+//let's load our config values
+static const bool config_loaded=[](){
+    load_config(); //we can call our function here.
+    return true;
+}(); //last () is to call our lambda function immediately
+
+//get our config values
+static const size_t MAX_URL_LENGTH=get_config_size("MAX_URL_LENGTH");
+static const size_t MAX_HOSTNAME_LENGTH=get_config_size("MAX_HOSTNAME_LENGTH");
+static const size_t MAX_LABEL_LENGTH=get_config_size("MAX_LABEL_LENGTH"); //will use it in domain_breakdown() function
 
 //public function parse()
 //btw I am using std::string_view as argument instead of std::string cause all the actions we will perform are read-only(except the trim i guess which I am gonna explain below).
@@ -17,6 +29,13 @@
 ParsedURL URLParser::parse(std::string_view raw_url){
     ParsedURL result; //first create an instance of ParsedURL object.
     result.original_url=raw_url; //keep an original copy.
+
+    //at the very first we check if the url is suspiciously long
+    if (raw_url.size()>MAX_URL_LENGTH){
+        result.very_long_url=true;
+        return result; //we don't want to waste work on this url
+    }
+
     //now we will trim the raw_url.
     trim_url(raw_url);
 
@@ -41,7 +60,8 @@ ParsedURL URLParser::parse(std::string_view raw_url){
     //now check if username contains any domain name looking content
     username_anomaly_checker(result);
 
-    //NEXT TASK:extract host name
+    //now extract the host name and port
+    host_extractor(raw_url,result);
 
     //NEXT TASK:domain brekdown if result.is_domain && !result.full_host_without_port.empty()
 
@@ -226,6 +246,11 @@ void URLParser::host_extractor(std::string_view& raw_url,ParsedURL& result){
     //first let's extract the full host with port(if present)
     result.full_host=raw_url.substr(0,boundary_of_hostname);
 
+    //check if hostname exceeds max length
+    if (result.full_host.size()>MAX_HOSTNAME_LENGTH){
+        result.very_long_hostname=true;
+    }
+
     //we will find first and last occuerence of ':'.if both returns same index that means we have only one ':' in our full host name.that means it can't be ipv6.
     //in that case we will treat everything after that as port.
     //if no ':' found then it can't be ipv6 and also no port specified.
@@ -355,7 +380,5 @@ bool URLParser::is_all_digits(std::string_view remaining_part){
 
 //To do:
 /*
-is this..is.example.com valid if not then we have to implement another filter in domain_breakdown() function.
-add url and hostname length check
-write domain_breakdown() function
+write domain_breakdown() function is this..is.example.com valid if not then we have to implement another filter in domain_breakdown() function.
 */
