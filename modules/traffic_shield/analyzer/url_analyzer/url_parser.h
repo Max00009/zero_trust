@@ -24,16 +24,15 @@ struct ParsedURL{
     bool has_host=true; //if host is present then '://' is used after scheme name.if host not present then only ':' used.http://[www.example.com]/path everything within [] is host.
     std::string_view full_host; //e.g.  "mail.google.com"
     std::string_view full_host_without_port; //we strip the port if present
-    std::string_view subdomain; //e.g.  "mail"
-    std::string registered_domain; //e.g.  "google.com"   (eTLD+1).We have to use std::string here cause we will have to lowercase it.
-    std::string_view domain_label;  //e.g.  google"   (name without TLD)
-    std::string_view tld;   //e.g.  "com"  or  "co.uk"
+    std::vector<std::string> subdomains; //will contain parsed subdomains
+    std::string registered_domain; //e.g.  "google.com"   (eTLD+1).
+    std::string domain_label;  //e.g.  google"   (name without TLD)
+    std::string tld;   //e.g.  "com"  or  "co.uk"
 
     bool is_domain_name=false; //example.com
     bool is_ip_address=false;
     bool is_ipv4=false; //all digits and dots
     bool is_ipv6=false; //starts with '['
-    int subdomain_depth=0; //this might come from config value.or maybe directly at cpp file during parsing.
     int port=-1;    //-1 means port not specified.
 
     //path
@@ -66,7 +65,8 @@ struct ParsedURL{
     bool malformed_port=false; //when port contains non-numerical value
     bool no_dots_in_host=false; //https://localhost/path or http://13143/path
     bool no_dots_bare_ip_in_host=false; //http://13143/path (more suspicious than https://localhost/path)
-
+    bool malformed_domain_name=false; //example..com (sequencial dots)
+    bool unknown_tld=false; //the tld doesn't match any tld in tld_list.just flagging it.we will still proceed.
 
     //status
     bool parse_successfull=true;   //false if url is fundamentally malformed.
@@ -97,10 +97,11 @@ private:
     static void credential_extractor(std::string_view& raw_url,ParsedURL& result); //thsi function will check if any credentials present in our url.
     static void username_anomaly_checker(ParsedURL& result); //this function will check if the username mimics any domain name and set the value of domain_as_username bool.
     static void host_extractor(std::string_view& raw_url,ParsedURL& result); //this function will extract the hostname if present.
+    static void host_length_checker(ParsedURL& result); //minimalist function to check if hostname exceeds the max limit.
     static void detect_address_type(std::string_view full_host_without_port,ParsedURL& result); //helper function of host_extractor function to check if ip is numeric like 10.48.32.95 or domain like example.com
     static void port_extractor(std::string_view remaining_part,ParsedURL& result); //this function will parse port
     static bool is_all_digits(std::string_view remaining_part); //helper function of port_extractor fucntion needed for port validation
-
+    static void domain_breakdown(ParsedURL& result); //it will breakdown each path of the domain name and store it in a vector
 };
 
 #endif
