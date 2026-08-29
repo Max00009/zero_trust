@@ -1,16 +1,17 @@
 //this program will break our url into different parts so we can detect any anomaly.
 //we will follow generic URL syntax defined in RFC 3986.
-#include "url_parser.h"
-#include "../utils/utils.h" //for is_same function
 #include <regex>
 #include <string>
 #include <string_view>
 #include <algorithm>
 #include <vector>
 #include <map>
+#include <fstream>
 #include <cctype> //for std::isspace
 #include <unordered_set>
 #include "../../traffic_shield_config.h"
+#include "url_parser.h"
+#include "../utils/utils.h" //for is_same() function
 
 //let's load our config values
 static const bool config_loaded=[](){
@@ -22,6 +23,7 @@ static const bool config_loaded=[](){
 static const size_t MAX_URL_LENGTH=get_config_size("MAX_URL_LENGTH");
 static const size_t MAX_HOSTNAME_LENGTH=get_config_size("MAX_HOSTNAME_LENGTH");
 static const size_t MAX_LABEL_LENGTH=get_config_size("MAX_LABEL_LENGTH"); //will use it in domain_breakdown() function
+static const size_t SUBDOMAIN_DEPTH=get_config_size("SUBDOMAIN_DEPTH");
 
 //public function parse()
 //btw I am using std::string_view as argument instead of std::string cause all the actions we will perform are read-only(except the trim i guess which I am gonna explain below).
@@ -43,9 +45,7 @@ ParsedURL URLParser::parse(std::string_view raw_url){
     set_scheme(raw_url,result);
     //if no scheme found then set_scheme will set 'parse_successfull=false'
     //and at that point further parsing doesn't make any sense.so we will terminate.
-    if (!result.parse_successfull){
-        return result;
-    }
+    if (!result.parse_successfull) return result;
 
     //now I will check if scheme is safe or not
     scheme_checker(result);
@@ -63,7 +63,15 @@ ParsedURL URLParser::parse(std::string_view raw_url){
     //now extract the host name and port
     host_extractor(raw_url,result);
 
-    //NEXT TASK:domain brekdown if result.is_domain && !result.full_host_without_port.empty()
+    //check if hostname too long.if it is then we don't want to waste time
+    if (result.very_long_hostname || result.malformed_host) return result;
+
+    //domain brekdown if needed
+    if (!result.full_host_without_port.empty() && result.is_domain_name) domain_breakdown(result);
+    
+    //check if domain name is malformed.if it is we don't want to waste time
+    if (result.malformed_domain_name) return result;
+
 
     return result;
 }
@@ -246,11 +254,6 @@ void URLParser::host_extractor(std::string_view& raw_url,ParsedURL& result){
     //first let's extract the full host with port(if present)
     result.full_host=raw_url.substr(0,boundary_of_hostname);
 
-    //check if hostname exceeds max length
-    if (result.full_host.size()>MAX_HOSTNAME_LENGTH){
-        result.very_long_hostname=true;
-    }
-
     //we will find first and last occuerence of ':'.if both returns same index that means we have only one ':' in our full host name.that means it can't be ipv6.
     //in that case we will treat everything after that as port.
     //if no ':' found then it can't be ipv6 and also no port specified.
@@ -266,7 +269,12 @@ void URLParser::host_extractor(std::string_view& raw_url,ParsedURL& result){
                 result.is_ipv6=true;
                 size_t pos_of_close_square_brac=result.full_host.rfind(']');
                 result.full_host_without_port=result.full_host.substr(1,pos_of_close_square_brac-1); //leaving []
-
+                host_length_checker(result);
+                //this branch doesn't call detect_address_type() so we need to do a manual check if very_long_hostname so we can skip next if statement.
+                if (result.very_long_hostname){
+                    raw_url.remove_prefix(boundary_of_hostname);
+                    return; //return early
+                }
                 //now let's see if port is present.first we will check if there is any remaining part after [] by comparing size
                 if ((result.full_host.size()>(pos_of_close_square_brac+1))){
                     if ((pos_of_close_square_brac+1)==last_colon){ //we will check if the last colon is present after ']'.that way we can handle situation like [ipv6]:fake:port
@@ -283,15 +291,14 @@ void URLParser::host_extractor(std::string_view& raw_url,ParsedURL& result){
         }else{ //single colon. ipv4 with port or domain name with port is possible
             //take everything after ':' as port
             result.full_host_without_port=result.full_host.substr(0,first_colon);
+            host_length_checker(result);
             std::string_view remaining_part=result.full_host.substr(first_colon+1);
             port_extractor(remaining_part,result);
-            //TODO:now check if it is ip address like 10.48.0.34 or address like example.com
-            //TODO:we will create a function named detect_address_type(std::string_view result.full_host_without_port) to determine that
             detect_address_type(result.full_host_without_port,result);
         }
     }else{ //no colon present.portless ipv4 or domain name is possible
         result.full_host_without_port=result.full_host;
-        //TODO:call detect_address_type(std::string_view result.full_host_without_port)
+        host_length_checker(result);
         detect_address_type(result.full_host_without_port,result);
 
     }
@@ -304,7 +311,16 @@ void URLParser::host_extractor(std::string_view& raw_url,ParsedURL& result){
     //when pos!=npos-->boundary_of_hostname==pos so we do raw_url.remove_prefix(pos) this keeps our delimeter which we can use.
 }
 
+void URLParser::host_length_checker(ParsedURL& result){ //it's purpose is to just set the flag that we can use later to return early.
+    if (result.full_host_without_port.empty()) return;
+    if (result.full_host_without_port.size() > MAX_HOSTNAME_LENGTH){
+        result.very_long_hostname=true;
+    }
+}
+
 void URLParser::detect_address_type(std::string_view full_host_without_port,ParsedURL& result){
+    //first discard very long hostname
+    if (result.very_long_hostname) return;
     //4 '.' +each within range 0-255 -> numeric ip
     //else domain_name
     //NOTE:how to handle the case where multiple dot's in sequence like example...com?after breaking it down there will be an empty octet.and is_all_digits() already returns false for empty element
@@ -348,8 +364,6 @@ void URLParser::detect_address_type(std::string_view full_host_without_port,Pars
     }
 }
 
-
-
 void URLParser::port_extractor(std::string_view remaining_part,ParsedURL& result){
     if (is_all_digits(remaining_part)){
         //std::stoi() throws error in two cases std::invalid_argument (e.g. std::stoi("12x3").it's not supposed to happen in our case cause we already calll is_all_digits())
@@ -377,8 +391,81 @@ bool URLParser::is_all_digits(std::string_view remaining_part){
     });
 }
 
+void URLParser::domain_breakdown(ParsedURL& result){
+    //First I thought this time I can just load the tld_list.txt by using relative path cause it's in the same directory as this cpp file.
+    //but our program will look into the directory from where we run our code.that's problem with relative path.
+    //for example,if I am in /Users/max/zero_trust/zero_trust_code_base directory and run python3 entry_point.py it will start looking in /Users/max/zero_trust/zero_trust_code_base/ directory.
+    //but if I am in /Users/max/zero_trust directory and run python3 zero_trust_code_base/entry_point.py it will look into /Users/max/zero_trust/ directory.
+    //so we will load the tld_list.txt file dynamically at the beginning when our program runs.that's why static
+    static const std::string tld_list_file_path=[]()->std::string{
+        //we will use Dl_info just like we did in traffic_shield_config.h file to find the env file
+        //but this time we won't have to travel upwards directories to find the file cause it will reside in same directory.
+        Dl_info info;
+        //we have to create a dummy lambda function to pass in dladdr function cause we can't pass a member function which results in undefined behaviour
+        auto dummy_function=[](){};
+        if (!dladdr((void*)&dummy_function,&info) || !info.dli_fname) return ""; //&dummy_function gives the memory adress of dummy_function which is actually a lambda object.(void*) casts that pointer to void* which dladdr expects   
+        return (std::filesystem::path(info.dli_fname).parent_path()/"tld_list.txt").string(); //we don't need to include filesystem and dlfcn.h at the top cause traffic_shield_config.h already includes that
+    }();
+    static const std::unordered_set<std::string> tld_list=[](){
+        std::unordered_set<std::string> set;
+        std::ifstream file(tld_list_file_path);
+        if (!file){
+            std::cerr<<"[url_parser.cpp] Failed to open tld_list.txt file"<<std::endl;
+            std::exit(1);
+        }
+        std::string line;
+        while(std::getline(file,line)){
+            if (line.empty() || line[0]=='#') continue;
+            set.insert(line);
+        }
+        return set;
+    }();
 
-//To do:
-/*
-write domain_breakdown() function is this..is.example.com valid if not then we have to implement another filter in domain_breakdown() function.
-*/
+    std::string_view remaining=result.full_host_without_port; //make a copy cause we need to advance iterator
+    while (!remaining.empty() && result.subdomains.size()<SUBDOMAIN_DEPTH){
+        size_t dot_pos=remaining.find('.');
+        std::string label;
+        //extract the label
+        if (dot_pos==std::string_view::npos){
+            label=std::string(remaining);
+            remaining={}; //we could've do break here but that will leave the while loop.but we need punycode check,lower case and emplace_back logic.
+        }else{
+            label=std::string(remaining.substr(0,dot_pos));
+            remaining.remove_prefix(dot_pos+1);
+        }
+        //discard empty label.cause empty label indicates there were two dots in sequence("..")
+        //also do label length check
+        if (label.empty() || label.size()>MAX_LABEL_LENGTH){result.malformed_domain_name=true; return;}
+
+        //punycode check
+        if (label.starts_with("xn--")) {result.is_punnycode=true; } //first I returned early in case of punycode but later realized punycode is used in valid domain name.so we just flag it.analyzer will decide further.
+
+        //convert to lowercase.cause domain names are case insensitive per RFC 4343
+        //This approach ensures locale-independent behavior for standard ASCII while preventing crashes on platforms where char defaults to signed(we are explicitely casting c to unsigned char to prevent undefinded behaviour if the character has a negative binary value which is common in signed char systems)
+        std::transform(label.begin(),label.end(),label.begin(),[](unsigned char c){return std::tolower(c);});
+        
+        //emplace_back is better than push_back
+        result.subdomains.emplace_back(label);
+    }
+    size_t subdomain_vector_size=result.subdomains.size();
+    if (subdomain_vector_size<2){//cause nothing to process here.
+        if (subdomain_vector_size==1) result.tld=result.subdomains[0]; //is not strictly necessary i am just recording the value incase analyser wants to work with the tld
+        result.malformed_domain_name=true; 
+        return;
+    }else{
+        std::string two_part=result.subdomains[subdomain_vector_size-2]+"."+result.subdomains[subdomain_vector_size-1];
+        if (tld_list.count(two_part)){
+            if (subdomain_vector_size==2){
+                result.malformed_domain_name=true; //cause it has two parts tld and nothing before it.
+                return;
+            }
+            result.tld=two_part; //take the last two part as tld
+            result.domain_label=result.subdomains[subdomain_vector_size-3]; //we take the part before tld as domain_label
+        }else{
+            result.tld=result.subdomains[subdomain_vector_size-1]; //we take the last part as tld
+            if (!tld_list.count(result.tld)) result.unknown_tld=true; //we run the check on the last part only
+            result.domain_label=result.subdomains[subdomain_vector_size-2]; //take the second last part as domain_label
+        }
+    }
+    result.registered_domain=result.domain_label+"."+result.tld;
+}
