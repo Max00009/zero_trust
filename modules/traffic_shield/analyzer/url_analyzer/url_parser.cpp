@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <vector>
 #include <map>
-#include <fstream>
+#include <fstream> //for std::ifstream
 #include <cctype> //for std::isspace
 #include <unordered_set>
 #include "../../traffic_shield_config.h"
@@ -22,7 +22,7 @@ static const bool config_loaded=[](){
 //get our config values
 static const size_t MAX_URL_LENGTH=get_config_size("MAX_URL_LENGTH");
 static const size_t MAX_HOSTNAME_LENGTH=get_config_size("MAX_HOSTNAME_LENGTH");
-static const size_t MAX_LABEL_LENGTH=get_config_size("MAX_LABEL_LENGTH"); //will use it in domain_breakdown() function
+static const size_t MAX_LABEL_LENGTH=get_config_size("MAX_LABEL_LENGTH");
 static const size_t SUBDOMAIN_DEPTH=get_config_size("SUBDOMAIN_DEPTH");
 
 //public function parse()
@@ -71,6 +71,11 @@ ParsedURL URLParser::parse(std::string_view raw_url){
     
     //check if domain name is malformed.if it is we don't want to waste time
     if (result.malformed_domain_name) return result;
+
+    //after returning from host_extractor function, now our iterator of raw_url is at any of the following ['/','?','#'].based on the value we will call different functions.
+    if (raw_url.starts_with('/')) path_extractor(raw_url,result);
+    if(raw_url.starts_with('?')) parameter_extractor(raw_url,result);
+    if(raw_url.starts_with('#')) fragment_extractor(raw_url,result);
 
 
     return result;
@@ -304,7 +309,7 @@ void URLParser::host_extractor(std::string_view& raw_url,ParsedURL& result){
     }
 
     
-    //now move past [/,?,#]
+    //now move at [/,?,#]
     raw_url.remove_prefix(boundary_of_hostname);
     //notice we are not adding +1 to go past the delimeter.cause in next step we will need to see this delimeter to determine if next part is a file path(/) or parameter(?) or fragment(#)
     //when pos==npos-->boundary_of_hostname==raw_url.size() so we do raw_url.remove_prefix(raw_url.size());
@@ -438,14 +443,13 @@ void URLParser::domain_breakdown(ParsedURL& result){
         if (label.empty() || label.size()>MAX_LABEL_LENGTH){result.malformed_domain_name=true; return;}
 
         //punycode check
-        if (label.starts_with("xn--")) {result.is_punnycode=true; } //first I returned early in case of punycode but later realized punycode is used in valid domain name.so we just flag it.analyzer will decide further.
+        if (label.starts_with("xn--")) {result.is_punycode=true; } //first I returned early in case of punycode but later realized punycode is used in valid domain name.so we just flag it.analyzer will decide further.
 
         //convert to lowercase.cause domain names are case insensitive per RFC 4343
         //This approach ensures locale-independent behavior for standard ASCII while preventing crashes on platforms where char defaults to signed(we are explicitely casting c to unsigned char to prevent undefinded behaviour if the character has a negative binary value which is common in signed char systems)
         std::transform(label.begin(),label.end(),label.begin(),[](unsigned char c){return std::tolower(c);});
         
-        //emplace_back is better than push_back
-        result.subdomains.emplace_back(label);
+        result.subdomains.push_back(std::move(label)); //we move to avoid copy
     }
     size_t subdomain_vector_size=result.subdomains.size();
     if (subdomain_vector_size<2){//cause nothing to process here.
@@ -468,4 +472,18 @@ void URLParser::domain_breakdown(ParsedURL& result){
         }
     }
     result.registered_domain=result.domain_label+"."+result.tld;
+}
+
+void URLParser::path_extractor(std::string_view& raw_url,ParsedURL& result){
+    //we will take everything before '?' or '#'.if no '?' or '#' present then we take the whole remaining string
+    size_t pos=raw_url.find_first_of("?#");
+    size_t boundary=(pos==std::string_view::npos)?raw_url.size():pos;
+    result.path=raw_url.substr(0,boundary);
+    raw_url.remove_prefix(boundary); //keep '?' or '#' cause we will need it
+}
+void URLParser::parameter_extractor(std::string_view& raw_url,ParsedURL& result){
+
+}
+void URLParser::fragment_extractor(std::string_view& raw_url,ParsedURL& result){
+
 }
