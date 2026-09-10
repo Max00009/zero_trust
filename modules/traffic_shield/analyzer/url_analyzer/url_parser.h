@@ -53,7 +53,7 @@ struct ParsedURL{
     bool very_long_url=false; //we can take a max length from config file and anything lengthier than that will be flagged.
     bool has_null_bytes=false;  //if %00 anywhere.
     bool double_encoding=false; //if % is also encoded(%25xx).
-    bool is_punnycode=false;   //xn-- label in host.exploited in Homograph attacks.
+    bool is_punycode=false;   //xn-- label in host.exploited in Homograph attacks.
     bool has_at_in_host=false;  //if @ present in host name.old trick.
     bool blank_creds=false; //'@' is present but there is blank before that.suspicious.
     bool blank_username=false; //if there is nothing infront of ':' then it's suspicious.
@@ -102,6 +102,9 @@ private:
     static void port_extractor(std::string_view remaining_part,ParsedURL& result); //this function will parse port
     static bool is_all_digits(std::string_view remaining_part); //helper function of port_extractor fucntion needed for port validation
     static void domain_breakdown(ParsedURL& result); //it will breakdown each path of the domain name and store it in a vector
+    static void path_extractor(std::string_view& raw_url,ParsedURL& result); //it will extract the path after hostname untill it hits either '?' or '#' or the end
+    static void parameter_extractor(std::string_view& raw_url,ParsedURL& result);
+    static void fragment_extractor(std::string_view& raw_url,ParsedURL& result);
 };
 
 #endif
