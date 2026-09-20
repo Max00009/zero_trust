@@ -480,10 +480,67 @@ void URLParser::path_extractor(std::string_view& raw_url,ParsedURL& result){
     size_t boundary=(pos==std::string_view::npos)?raw_url.size():pos;
     result.path=raw_url.substr(0,boundary);
     raw_url.remove_prefix(boundary); //keep '?' or '#' cause we will need it
+    url_decoder(result.path,result.decoded_path,result); //url decode
 }
 void URLParser::parameter_extractor(std::string_view& raw_url,ParsedURL& result){
 
 }
 void URLParser::fragment_extractor(std::string_view& raw_url,ParsedURL& result){
+
+}
+
+unsigned char URLParser::hex_to_byte(char first_hex,char second_hex){
+    //first we get the int value of the hex char
+    auto hex_val=[](char c)->int{
+        if (c>='0' && c<='9') return c-'0';
+        if (c>='a' && c<='f') return c-'a'+10;
+        if (c>='A' && c<='F') return c-'A'+10;
+    };
+    int high_nibble=hex_val(first_hex);
+    int low_nibble=hex_val(second_hex);
+    //to convert two hex chars into one bytes we just need to add their bits together and then convert back.
+    //we can move the bits of first hex char 4 bits to the left(leftshift by 4) and then do bitwise OR operation with bits of second hex char.that makes 4+4=8 bits=1 byte
+    //also regular arithmatic can be done instead to get the same result: high_nibble*16+low_nibble
+    //DUE:Handle signed issue
+    return static_cast<unsigned char>((high_nibble<<4) | low_nibble); //<<4 is bit shift and | acts as addition of bits after high_nibble
+}
+
+void URLParser::url_decoder(std::string_view encoded,std::string& destination,ParsedURL& result){
+    //first we will scan each character and if it's '%' we will check if next two chars are valid hex.
+    //if it is then we will call hex_to_byte() function to convert them to decoded char and then append them to the decoded_result
+    
+    //lambda function to check if a char is valid hex
+    auto is_hex=[](char c)->bool{
+        return (c>='0' && c<='9') || (c>='a' && c<='f') || (c>='A' && c<='F');
+    };
+    for (size_t i=0;i<encoded.size();++i){
+        char curr_char=encoded[i];
+        if (curr_char=='%'){
+            //first we will check if next two chars are valid.if they are then we call hex_to_byte().
+            if (i+2<encoded.size() && is_hex(encoded[i+1]) && is_hex(encoded[i+2])){
+                //call hex_to_byte() and get the value.
+                unsigned char decoded_char=hex_to_byte(encoded[i+1],encoded[i+2]);
+                //check '\0' or '%'
+                if (decoded_char=='\0'){
+                    result.has_null_bytes=true;
+                    //we terminate at null byte.cause null byte in url is always invalid
+                    return;
+                }
+                if (decoded_char=='%'){
+                    result.double_encoding=true;
+                    //we don't double decode cause that's what the attacker wants
+                }
+                //append accordingly
+                destination+=decoded_char;
+                i+=2; //skip next two hex
+                continue;
+            }else{
+                //if next two hex are not valid then we just parse them as it is and set the malformed_percentage_encoding flag.
+                //RFC 3986 says "% in a URL is only special when followed by exactly two hex digits.If % is NOT followed by two valid hex digits, it's just treated as a literal % character in the data."
+                result.malformed_percentage_encoding=true;
+            }
+        }
+        destination+=curr_char;
+    }
 
 }
