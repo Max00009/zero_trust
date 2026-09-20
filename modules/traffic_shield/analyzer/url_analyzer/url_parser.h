@@ -67,6 +67,7 @@ struct ParsedURL{
     bool no_dots_bare_ip_in_host=false; //http://13143/path (more suspicious than https://localhost/path)
     bool malformed_domain_name=false; //example..com (sequencial dots)
     bool unknown_tld=false; //the tld doesn't match any tld in tld_list.just flagging it.we will still proceed.
+    bool malformed_percentage_encoding=false; //incase there is a '%' but next two chars are not valid hex chars.we just flag it.
 
     //status
     bool parse_successfull=true;   //false if url is fundamentally malformed.
@@ -105,6 +106,9 @@ private:
     static void path_extractor(std::string_view& raw_url,ParsedURL& result); //it will extract the path after hostname untill it hits either '?' or '#' or the end
     static void parameter_extractor(std::string_view& raw_url,ParsedURL& result);
     static void fragment_extractor(std::string_view& raw_url,ParsedURL& result);
+    static unsigned char hex_to_byte(char first_hex,char second_hex); //this is a helper function that will convert valid hex to byte.it takes two hex and returns one byte.
+    static void url_decoder(std::string_view encoded,std::string& destination,ParsedURL& result); //this is a helper function that will percentage(%) decode our url.e.g. '%2F'-->'/'
+
 };
 
 #endif
