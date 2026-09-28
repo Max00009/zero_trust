@@ -73,9 +73,9 @@ ParsedURL URLParser::parse(std::string_view raw_url){
     if (result.malformed_domain_name) return result;
 
     //after returning from host_extractor function, now our iterator of raw_url is at any of the following ['/','?','#'].based on the value we will call different functions.
-    if (raw_url.starts_with('/')) path_extractor(raw_url,result);
-    if(raw_url.starts_with('?')) parameter_extractor(raw_url,result);
-    if(raw_url.starts_with('#')) fragment_extractor(raw_url,result);
+    if (!raw_url.empty() && raw_url.starts_with('/')) path_extractor(raw_url,result);
+    if(!raw_url.empty() && raw_url.starts_with('?')) parameter_extractor(raw_url,result);
+    if(!raw_url.empty() && raw_url.starts_with('#')) fragment_extractor(raw_url,result);
 
 
     return result;
@@ -478,13 +478,46 @@ void URLParser::path_extractor(std::string_view& raw_url,ParsedURL& result){
     //we will take everything before '?' or '#'.if no '?' or '#' present then we take the whole remaining string
     size_t pos=raw_url.find_first_of("?#");
     size_t boundary=(pos==std::string_view::npos)?raw_url.size():pos;
-    result.path=raw_url.substr(0,boundary);
+    std::string_view extracted_path=raw_url.substr(0,boundary);
+    if(extracted_path.empty()) return; //we don't want to add empty line to result.raw_path and result.decoded_path
+    result.path=extracted_path;
     raw_url.remove_prefix(boundary); //keep '?' or '#' cause we will need it
     url_decoder(result.path,result.decoded_path,result); //url decode
 }
 void URLParser::parameter_extractor(std::string_view& raw_url,ParsedURL& result){
-
+    raw_url.remove_prefix(1); //first strip '?'
+    //look if '#' is present
+    size_t pos=raw_url.find('#');
+    size_t boundary=(pos==std::string_view::npos)?raw_url.size():pos;
+    std::string_view extracted_query=raw_url.substr(0,boundary);
+    if (extracted_query.empty()) return; //we don't want to add empty line to result.raw_query and result.decoded_query
+    result.raw_query=extracted_query;
+    raw_url.remove_prefix(boundary); //keep the '#' cause we will need it
+    url_decoder(result.raw_query,result.decoded_query,result);
+    //now we will loop through decoded_query and extract (key,value) and store them in a map
+    std::string key_part="";
+    std::string value_part="";
+    bool after_equal=false;
+    for (char c:result.decoded_query){
+        if (c=='='){
+            after_equal=true;
+        }else if(c=='&'){
+            result.params.emplace(key_part,value_part);
+            key_part="";
+            value_part="";
+            after_equal=false;
+            continue;
+        }else{
+            if (after_equal){
+                value_part+=c;
+            }else{
+                key_part+=c;
+            }
+        }
+    }
+    result.params.emplace(key_part,value_part);
 }
+
 void URLParser::fragment_extractor(std::string_view& raw_url,ParsedURL& result){
 
 }
