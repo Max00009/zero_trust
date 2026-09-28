@@ -44,7 +44,7 @@ struct ParsedURL{
     //query
     std::string_view raw_query;
     std::string decoded_query; //url decoded.We have to use std::string here cause we will modify the data.
-    std::map<std::string_view,std::string_view> params; //for (key->value) pairs of query.
+    std::map<std::string,std::string> params; //for (key->value) pairs of query.
 
     //fragment
     std::string_view fragment;  //amything after #
@@ -104,7 +104,7 @@ private:
     static bool is_all_digits(std::string_view remaining_part); //helper function of port_extractor fucntion needed for port validation
     static void domain_breakdown(ParsedURL& result); //it will breakdown each path of the domain name and store it in a vector
     static void path_extractor(std::string_view& raw_url,ParsedURL& result); //it will extract the path after hostname untill it hits either '?' or '#' or the end
-    static void parameter_extractor(std::string_view& raw_url,ParsedURL& result);
+    static void parameter_extractor(std::string_view& raw_url,ParsedURL& result); //it will extract parameters from the url and store them in a std::map untill it hits '#' or the end
     static void fragment_extractor(std::string_view& raw_url,ParsedURL& result);
     static unsigned char hex_to_byte(char first_hex,char second_hex); //this is a helper function that will convert valid hex to byte.it takes two hex and returns one byte.
     static void url_decoder(std::string_view encoded,std::string& destination,ParsedURL& result); //this is a helper function that will percentage(%) decode our url.e.g. '%2F'-->'/'
