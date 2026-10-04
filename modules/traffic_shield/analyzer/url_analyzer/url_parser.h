@@ -68,6 +68,7 @@ struct ParsedURL{
     bool malformed_domain_name=false; //example..com (sequencial dots)
     bool unknown_tld=false; //the tld doesn't match any tld in tld_list.just flagging it.we will still proceed.
     bool malformed_percentage_encoding=false; //incase there is a '%' but next two chars are not valid hex chars.we just flag it.
+    bool empty_key_query=false; //value present but key is emoty(e.g. ../?key1=value1&=value2).it can be used to confuse poorly written parsers or WAFs. Some systems treat empty key with value as a bypass technique.
 
     //status
     bool parse_successfull=true;   //false if url is fundamentally malformed.
@@ -108,6 +109,7 @@ private:
     static void fragment_extractor(std::string_view& raw_url,ParsedURL& result);
     static unsigned char hex_to_byte(char first_hex,char second_hex); //this is a helper function that will convert valid hex to byte.it takes two hex and returns one byte.
     static void url_decoder(std::string_view encoded,std::string& destination,ParsedURL& result); //this is a helper function that will percentage(%) decode our url.e.g. '%2F'-->'/'
+    static void params_inserter(std::string key,std::string value,ParsedURL& result); //helper function of parameter_extractor which will handle some edge cases and insert key,value pairs.
 
 };
 
