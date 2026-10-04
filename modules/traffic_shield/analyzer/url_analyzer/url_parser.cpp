@@ -81,7 +81,6 @@ ParsedURL URLParser::parse(std::string_view raw_url){
     return result;
 }
 
-//define the trim function
 void URLParser::trim_url(std::string_view& url){
     while (!url.empty() && std::isspace(url.front())){ //just a double check on empty string.
         url.remove_prefix(1);
@@ -98,7 +97,6 @@ void URLParser::trim_url(std::string_view& url){
 //if static is in front of a free function:"this function only exists inside this file. No other file can see or call it."
 //just put it here cause I don't know where to write this down.
 
-//define get_scheme function
 void URLParser::set_scheme(std::string_view& raw_url,ParsedURL& result){
     size_t pos=raw_url.find(':');
     if (pos!=std::string_view::npos && pos!=0){
@@ -116,7 +114,6 @@ void URLParser::set_scheme(std::string_view& raw_url,ParsedURL& result){
     
 }
 
-//define scheme_checker function
 void URLParser::scheme_checker(ParsedURL& result){
     //first let's create a whitelist
     static const std::unordered_set<std::string_view> allowed_schemes={
@@ -150,7 +147,6 @@ void URLParser::scheme_checker(ParsedURL& result){
     //should I also make a bad_schemes{} set?I don't know yet.
 }
 
-//define detect_host function
 void URLParser::detect_host(std::string_view& raw_url,ParsedURL& result){
     //To check if our current state of raw_url starts with "//" I will use starts_with() member function.
     //C++20 is required.compile with -std=c++20 .
@@ -168,7 +164,6 @@ void URLParser::detect_host(std::string_view& raw_url,ParsedURL& result){
 
 }
 
-//define credential_extractor function
 void URLParser::credential_extractor(std::string_view& raw_url,ParsedURL& result){
     /*
     this is a basic structure of url with host: http://username:password@example.com/path
@@ -236,7 +231,6 @@ void URLParser::credential_extractor(std::string_view& raw_url,ParsedURL& result
     }
 }
 
-//define username_anomaly_checker function
 void URLParser::username_anomaly_checker(ParsedURL& result){
     //if we find '.' inside username then we flag it.
     if (result.username.find('.')!=std::string_view::npos){
@@ -502,7 +496,7 @@ void URLParser::parameter_extractor(std::string_view& raw_url,ParsedURL& result)
         if (c=='='){
             after_equal=true;
         }else if(c=='&'){
-            result.params.emplace(key_part,value_part);
+            params_inserter(key_part,value_part,result);
             key_part="";
             value_part="";
             after_equal=false;
@@ -515,7 +509,12 @@ void URLParser::parameter_extractor(std::string_view& raw_url,ParsedURL& result)
             }
         }
     }
-    result.params.emplace(key_part,value_part);
+    params_inserter(key_part,value_part,result);
+}
+
+void URLParser::params_inserter(std::string key,std::string value,ParsedURL& result){
+    if(key.empty() && !value.empty()) result.empty_key_query=true; //if key is empty but value present we flag it
+    if (!key.empty()) result.params.emplace(key,value); //we only insert if key is present
 }
 
 void URLParser::fragment_extractor(std::string_view& raw_url,ParsedURL& result){
