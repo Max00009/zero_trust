@@ -477,6 +477,16 @@ void URLParser::path_extractor(std::string_view& raw_url,ParsedURL& result){
     result.path=extracted_path;
     raw_url.remove_prefix(boundary); //keep '?' or '#' cause we will need it
     url_decoder(result.path,result.decoded_path,result); //url decode
+    size_t pos_of_last_dot=result.decoded_path.rfind('.');
+    size_t pos_of_last_slash=result.decoded_path.rfind('/');
+    if(pos_of_last_dot!=std::string_view::npos){
+        if(pos_of_last_slash!=std::string_view::npos && pos_of_last_slash>pos_of_last_dot){ //if there is '/' after extension we discard that.(e.g. .../file.php/another/path)
+            return;
+        }
+        std::string_view ext=result.decoded_path.substr(pos_of_last_dot+1);
+        if(!ext.empty()) result.file_extension=ext;
+    }
+    //I am not sure if the path_segments variable is necessary.so I am not populating that now.maybe later.
 }
 void URLParser::parameter_extractor(std::string_view& raw_url,ParsedURL& result){
     raw_url.remove_prefix(1); //first strip '?'
@@ -518,7 +528,9 @@ void URLParser::params_inserter(std::string key,std::string value,ParsedURL& res
 }
 
 void URLParser::fragment_extractor(std::string_view& raw_url,ParsedURL& result){
-
+    raw_url.remove_prefix(1); //strip '#'
+    result.fragment=raw_url;
+    raw_url={};   
 }
 
 unsigned char URLParser::hex_to_byte(char first_hex,char second_hex){
