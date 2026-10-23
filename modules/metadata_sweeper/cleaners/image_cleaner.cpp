@@ -3,11 +3,6 @@
 #include <cstdlib> //for system which is required to run shell command inside cpp
 extern "C"{
 const char* image_cleaner(const char* filepath,bool change_filesys_date,bool change_internal_date,bool replace_original){
-    //check if exiftool is present.i decided to do this step in the wrapper during import.so it will only happen once.
-    // int check=system("which exiftool > /dev/null 2>&1");//we only care about the return value.not the exact output text.that's why we are making the output disappear
-    // if(check!=0){
-    //     return "ERROR:EXIFTOOL_NOT_FOUND";
-    // }
     //validates input
     if(filepath==NULL ||filepath[0]=='\0'){
         return "ERROR:INVALID_FILEPATH";
