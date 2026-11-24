@@ -1,4 +1,5 @@
 #include "url_parser.h"
+#include "url_analyzer.h"
 #include <string>
 //Static Analysis
 //Heuristic Analysis
