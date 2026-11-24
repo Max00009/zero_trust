@@ -1,8 +1,10 @@
 #include "gateway.h"
 #include "../cache/cache.h"
 #include "../decision_engine/decision.h"
+#include "../analyzer/url_analyzer/url_analyzer.h"
+#include "../traffic_shield_config.h"
 #include <iostream>
-#include <cstring> //bruh can't remember why i included ctring instead of string.
+#include <cstring> //bruh can't remember why i included cstring instead of string.
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -11,7 +13,6 @@
 #include <fstream> //just for testing.
 #include <unordered_map>
 #include <atomic> //for atomic type.
-#include "../traffic_shield_config.h"
 
 //here I will load the config values directly.no need to pass argument from python file.
 //I just learnt I cannot call a function at top of our cpp code.
@@ -54,15 +55,7 @@ std::atomic<size_t> url_id=1; //atomic to make it thread-safe.without atomic,if 
 static std::unordered_map<size_t,bool> result_hashtable;
 static std::mutex result_hashtable_mutex;
 
-//below two functions are just dummy.main function will be defined in respective file.
-int url_analyzer(std::string url){
-    {
-        std::lock_guard<std::mutex> lock(log_file_mutex);
-        std::ofstream Logfile("delete_also.txt",std::ios::app);
-        //Logfile<<task.id <<" url analizer working.."<<std::endl;
-    }
-    return false;
-}
+//below functions are just dummy.main function will be defined in respective file.
 int threat_intelligence_module(Task task){
     {
         std::lock_guard<std::mutex> lock(log_file_mutex);
