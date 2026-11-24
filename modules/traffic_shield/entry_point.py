@@ -1,8 +1,7 @@
-"""
-This is addon of mitmproxy.
-Usage: mitmweb -s entry_point.py --listen-host 0.0.0.0 --listen-port 8080 .(optional web port)
-run this^ before turning on proxy.idk why doing opposite causing repeated client disconnection.
-"""
+# This is addon of mitmproxy.
+# Usage: mitmweb -s entry_point.py --listen-host 0.0.0.0 --listen-port 8080 .(optional web port)
+# run this^ before turning on proxy.idk why doing opposite causing repeated client disconnection.
+
 from mitmproxy import http # type: ignore cause mitmproxy is not installed in my machine.it's in vm.
 from datetime import datetime
 from dotenv import load_dotenv #type:ignore it will be installed in vm.
@@ -13,12 +12,12 @@ import ctypes #to call cpp functions.
 #first we will load the config.env file
 load_dotenv()=os.path.join(os.path.dirname(os.path.abspath(__file__)),"traffic_shield_config.env")
 
-'''
-later we might need to load config values in this pyhton file for use.
-so I am making a function that will load config values from traffic_shield_config.env and it will make sure there is no empty value or missing key.
-in cpp files I have made custom functions that handle empty value and missing key case.but in python os.environ.get() doesn't throw any error in case of empty value or missing key.
-so I have to enforce must key,value in this function.
-'''
+
+# later we might need to load config values in this pyhton file for use.
+# so I am making a function that will load config values from traffic_shield_config.env and it will make sure there is no empty value or missing key.
+# in cpp files I have made custom functions that handle empty value and missing key case.but in python os.environ.get() doesn't throw any error in case of empty value or missing key.
+# so I have to enforce must key,value in this function.
+
 def get_config(key,cast=str): #default cast=string
     val=os.environ.get(key)
     if val is None or val.strip()=="":
