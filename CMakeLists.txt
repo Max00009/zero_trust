@@ -1,0 +1,11 @@
+# This is the root(apex) CMakeLists.txt
+cmake_minimum_required(VERSION 3.20)
+project(traffic_shield CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Subdirectories to add
+add_subdirectory(modules/metadata_sweeper)
+add_subdirectory(modules/traffic_shield)
