@@ -9,9 +9,9 @@
 #include <fstream> //for std::ifstream
 #include <cctype> //for std::isspace
 #include <unordered_set>
-#include "../../traffic_shield_config.h"
-#include "url_parser.h"
-#include "../utils/utils.h" //for is_same() function
+#include <traffic_shield_config.h>
+#include <analyzer/url_analyzer/url_parser.h>
+#include <analyzer/utils/utils.h> //for is_same() function
 
 //let's load our config values
 static const bool config_loaded=[](){

@@ -1,8 +1,8 @@
-#include "gateway.h"
-#include "../cache/cache.h"
-#include "../decision_engine/decision.h"
-#include "../analyzer/url_analyzer/url_analyzer.h"
-#include "../traffic_shield_config.h"
+#include <gateway/gateway.h>
+#include <cache/cache.h>
+#include <decision_engine/decision.h>
+#include <analyzer/url_analyzer/url_analyzer.h>
+#include <traffic_shield_config.h>
 #include <iostream>
 #include <cstring> //bruh can't remember why i included cstring instead of string.
 #include <mutex>
