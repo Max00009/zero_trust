@@ -4,6 +4,7 @@ target_link_libraries(gateway PRIVATE
     url_analyzer
     cache
     decision
+    Threads::Threads
 )
 
 set_target_properties(gateway PROPERTIES
