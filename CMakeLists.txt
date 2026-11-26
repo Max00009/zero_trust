@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# To avoid link errors in older glibc
+# Defines Threads::Threads (needed on older glibc). Thread-using targets must link it.
 find_package(Threads REQUIRED)
 
 # Subdirectories to add
